@@ -1,47 +1,93 @@
-import pandas as pd
-import re
-import numpy as np
-import nltk
-from nltk.stem.snowball import FrenchStemmer
-from nltk.corpus import stopwords
-import regex
-
+from xml.parsers.expat import model
+from sklearn.svm import LinearSVC
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+    classification_report
+)
+import joblib
 
 
 class Model:
-    def __init__(self, path_original_data):
-        self.original_df = pd.read_parquet(path_original_data)
-        self.df = self.original_df.copy()
+    def __init__(self):
+        pass
 
-    def __set_nltk_french_stop_words(self):
-        """Cette méthode télécharge les stop words depuis nltk, 
-        en français et les stocke dans un attribut de la classe.
+    def build_virgin_model_pipeline(self, X_train, y_train, X_test, y_test, model_path):
+        """Cette méthode exécute l'ensemble du pipeline de construction d'un modèle vierge.
+        Elle entraîne un modèle à partir des données d'entraînement, le teste sur les données de test,
+        évalue les performances du modèle et sauvegarde le modèle entraîné.
         """
-        nltk.download('stopwords')
-        stemmer = FrenchStemmer()
-        stop_words = set(stopwords.words("french"))
-        self.stop_words = stop_words
-
-    def remove_stopwords(self, text):
-        words = text.split()
-
-        filtered_words = []
-
-        for word in words:
-            
-            # garder les tokens
-            if word.startswith("[") and word.endswith("]"):
-                filtered_words.append(word)
-
-            # retirer stopwords normaux
-            elif word.lower() not in self.stop_words:
-                filtered_words.append(word)
-
-        return " ".join(filtered_words)
+        model = self.train_model(X_train, y_train)
+        y_pred = self.test_model(model, X_test)
+        evaluation_results = self.evaluate_model(y_test, y_pred)
+        self.save_model(model, model_path)
+        return evaluation_results
     
-    def clean_stopwords(self, text):
-        """Cette méthode nettoie les stop words d'un texte donné.
-        Elle utilise la méthode remove_stopwords pour retirer les stop words
-        et retourne le texte nettoyé.
+
+    def retrain_model_pipeline(self, X_train, y_train, X_test, y_test, model_path):
+        """Cette méthode exécute l'ensemble du pipeline de rechargement d'un modèle existant.
+        Elle charge un modèle existant, le réentraîne sur les nouvelles données d'entraînement,
+        le teste sur les données de test, évalue les performances du modèle et sauvegarde le modèle mis à jour.
         """
-        self.df["text_final"] = self.df['text_final'].apply(self.remove_stopwords)
+        model = joblib.load(model_path)
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        evaluation_results = self.evaluate_model(y_test, y_pred)
+        self.save_model(model, model_path)
+        return evaluation_results
+        
+
+    def train_model(self, X_train, y_train):
+        """Cette méthode entraîne un modèle de classification à partir des données d'entraînement.
+        Elle utilise un classificateur linéaire SVM pour apprendre à partir des caractéristiques d'entrée et des étiquettes de classe.
+        """
+        model= LinearSVC()
+        model.fit(X_train, y_train)
+        return model
+
+    
+    def test_model(self, model, X_test):
+        """Cette méthode teste un modèle entraîné sur les données de test.
+        Elle utilise le modèle pour faire des prédictions sur les caractéristiques de 
+        test et retourne les étiquettes prédites.
+        """
+        y_pred = model.predict(X_test)
+        return y_pred
+    
+    def evaluate_model(self, y_test, y_pred):
+        """Cette méthode évalue les performances d'un modèle en comparant les 
+        étiquettes de test réelles avec les étiquettes prédites.
+        Elle calcule plusieurs métriques d'évaluation, telles que l'accuracy, 
+        la précision, le rappel, le F1-score, la matrice de confusion et le rapport de classification,
+        et retourne ces métriques dans un dictionnaire.
+        """
+        accuracy = accuracy_score(y_test, y_pred)
+        precision = precision_score(y_test, y_pred)
+        recall = recall_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred)
+        conf_matrix = confusion_matrix(y_test, y_pred)
+        class_report = classification_report(y_test, y_pred)
+
+        return {
+            "accuracy": accuracy,
+            "precision": precision,
+            "recall": recall,
+            "f1_score": f1,
+            "confusion_matrix": conf_matrix,
+            "classification_report": class_report
+        }
+    
+    def save_model(self, model, file_path):
+        joblib.dump(model, file_path)
+
+
+    def predict(self, model_path, X):
+        """Cette méthode charge un modèle à partir d'un chemin de fichier spécifié et utilise ce modèle pour faire des prédictions sur les données d'entrée.
+        Elle retourne les étiquettes prédites par le modèle.
+        """
+        model = joblib.load(model_path)
+        y_pred = model.predict(X)
+        return y_pred

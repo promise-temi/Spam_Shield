@@ -2,7 +2,8 @@
 import re
 import math
 import numpy as np
-
+import pandas as pd
+import os
 
 urgency_words = [
     "urgent", "immédiat", "immédiate", "immédiatement",
@@ -176,6 +177,8 @@ class NLP_Feat_Eng:
         self.regex_politeness = r"\b(" + "|".join(self.politeness_words) + r")\b"
         self.regex_signature = r"\b(" + "|".join(self.signature_words) + r")\b"
 
+        self.corpus_path = "data/corpus.parquet"
+
 
     def feature_engineering_full_pipeline(self):
         """Cette méthode exécute l'ensemble du pipeline de feature engineering dans l'ordre en appelant les 
@@ -241,7 +244,8 @@ class NLP_Feat_Eng:
         self.replace_greetings_politeness_signatures()
         self.replace_digits()
         self.clean_special_characters()
-
+        # --- Mise à jour du corpus ---
+        self.update_corpus(self.corpus_path)
         return self.df
 
 
@@ -684,3 +688,14 @@ class NLP_Feat_Eng:
         et stocke le résultat dans une nouvelle colonne 'text_final' du DataFrame.
         """
         self.df["text_final"] = self.df["text_transformed"].apply(self.remove_special_chars)
+
+    
+    def update_corpus(self, corpus_path):
+        if os.path.exists(corpus_path):
+            df_corpus = pd.read_csv(corpus_path)
+            df_corpus = pd.concat([df_corpus, self.df['text_final'].str.split(expand=True).stack().reset_index(level=1, drop=True).to_frame('token').reset_index(drop=True)])
+        else:
+            df_corpus = self.df['text_final'].str.split(expand=True).stack().reset_index(level=1, drop=True).to_frame('token').reset_index(drop=True)
+        df_corpus = df_corpus.drop_duplicates(subset=['token'], keep='first').dropna().reset_index(drop=True)
+        df_corpus.to_parquet(corpus_path, index=False)
+        
