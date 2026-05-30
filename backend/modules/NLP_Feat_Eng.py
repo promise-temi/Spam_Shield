@@ -368,7 +368,7 @@ class NLP_Feat_Eng:
         colonne 'digit_count' du DataFrame.
         """
         self.df['digit_count'] = self.df['text'].str.count(self.regex_digit)
-        self.df['text'].iloc[1]
+        
 
 
     def word_digit_count(self):       
@@ -692,7 +692,7 @@ class NLP_Feat_Eng:
     
     def update_corpus(self, corpus_path):
         if os.path.exists(corpus_path):
-            df_corpus = pd.read_csv(corpus_path)
+            df_corpus = pd.read_parquet(corpus_path)
             df_corpus = pd.concat([df_corpus, self.df['text_final'].str.split(expand=True).stack().reset_index(level=1, drop=True).to_frame('token').reset_index(drop=True)])
         else:
             df_corpus = self.df['text_final'].str.split(expand=True).stack().reset_index(level=1, drop=True).to_frame('token').reset_index(drop=True)

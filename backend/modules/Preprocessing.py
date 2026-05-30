@@ -13,16 +13,18 @@ from scipy.sparse import hstack
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import RobustScaler, MinMaxScaler
 from scipy.sparse import hstack
+import joblib
 
 
 
 class Preprocessing:
-    def __init__(self, df):
+    def __init__(self, df, prediction_pipe=False):
         self.df = df
         self.__set_nltk_french_stop_words()
         self.text_col = "text_final"
         self.target_col = "label"
-        self.exclude_cols = ["text", "label", "text_transformed", "text_final", "text_preprocessed"]
+        self.exclude_cols = ["text", "label", "text_transformed", "text_final", "text_preprocessed", 'text_lower']
+        self.prediction_pipe = prediction_pipe
 
     def __set_nltk_french_stop_words(self):
         """Cette méthode télécharge les stop words depuis nltk, 
@@ -33,12 +35,12 @@ class Preprocessing:
         self.stop_words = set(stopwords.words("french"))
         
 
-    def preprossessing_pipeline(self):
+    def preprocessing_pipeline(self):
         """Cette méthode exécute l'ensemble du pipeline de prétraitement sur le DataFrame.
         Elle applique les différentes étapes de nettoyage et de transformation des données
         pour préparer les textes à l'analyse ultérieure.
         """
-        self.df["text_preprocessed"] = self.df[self.text_col].apply(self.clean_text)
+        self.df["text_preprocessed"] = self.df[self.text_col]
         self.clean_stopwords()
         self.apply_stemming()
         self.normalize_and_space_tokens()
@@ -48,6 +50,9 @@ class Preprocessing:
         self.tfidf_vectorization()
         self.robust_scale_numeric_features()
         self.hsstack_features()
+        if self.prediction_pipe:
+            return self.X_train_combined
+        
         return self.X_train_combined, self.X_test_combined, self.y_train, self.y_test
 
 
@@ -134,34 +139,49 @@ class Preprocessing:
         Elle utilise la fonction train_test_split de scikit-learn pour effectuer cette division
         en fonction de la taille du test et de l'état aléatoire spécifiés, puis retourne les ensembles d'entraînement et de test.
         """
+
+        
         feature_cols = [col for col in self.df.columns if col not in self.exclude_cols]
+        print(feature_cols)
         self.X_text = self.df["text_preprocessed"]
         self.X_num = self.df[feature_cols]
         self.y = self.df['label']
 
-        self.X_text_train, self.X_text_test, self.X_num_train, self.X_num_test, self.y_train, self.y_test = train_test_split(
-            self.X_text,
-            self.X_num,
-            self.y,
-            test_size=test_size,
-            random_state=random_state,
-            stratify=self.y
-        )
+        if self.prediction_pipe:
+            self.X_text_train = self.X_text
+            self.X_num_train = self.X_num
+            self.y_train = self.y
+        
+        if not self.prediction_pipe:
+            self.X_text_train, self.X_text_test, self.X_num_train, self.X_num_test, self.y_train, self.y_test = train_test_split(
+                self.X_text,
+                self.X_num,
+                self.y,
+                test_size=test_size,
+                random_state=random_state,
+                stratify=self.y
+            )
 
     def tfidf_vectorization(self):
         """Cette méthode applique la vectorisation TF-IDF aux textes d'entraînement et de test.
         Elle utilise la classe TfidfVectorizer de scikit-learn pour transformer les textes en matrices de caractéristiques
         basées sur la fréquence des termes, puis retourne les matrices d'entraînement et de test.
         """
-        vectorizer = TfidfVectorizer(
-            max_features=5000,
-            ngram_range=(1, 2),
-            min_df=2,
-            max_df=0.95
-        )
+        if not self.prediction_pipe:
+            vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1, 2), min_df=1, max_df=20_000_000)
+            
+            self.X_text_train_tfidf = vectorizer.fit_transform(self.X_text_train)
+            self.X_text_test_tfidf = vectorizer.transform(self.X_text_test)
+            joblib.dump(vectorizer, "tfidf.pkl")
 
-        self.X_text_train_tfidf = vectorizer.fit_transform(self.X_text_train)
-        self.X_text_test_tfidf = vectorizer.transform(self.X_text_test)
+        if self.prediction_pipe:
+            vectorizer = joblib.load("tfidf.pkl")
+            self.X_text_train_tfidf = vectorizer.transform(self.X_text_train)
+
+
+            
+        
+            
 
     
     def robust_scale_numeric_features(self):
@@ -169,14 +189,24 @@ class Preprocessing:
         Elle utilise la classe RobustScaler de scikit-learn pour transformer les caractéristiques numériques
         en utilisant la médiane et l'écart interquartile, puis retourne les matrices d'entraînement et de test normalisées.
         """
-        scaler = RobustScaler()
-        self.X_num_train_scaled = scaler.fit_transform(self.X_num_train)
-        self.X_num_test_scaled = scaler.transform(self.X_num_test)
+        if not self.prediction_pipe:
+            scaler = RobustScaler()
+            
+            self.X_num_train_scaled = scaler.fit_transform(self.X_num_train)
+            self.X_num_test_scaled = scaler.transform(self.X_num_test)
+            joblib.dump(scaler, "robust_scaler.pkl")
+        if self.prediction_pipe:
+            scaler = joblib.load("robust_scaler.pkl")
+            self.X_num_train_scaled = scaler.transform(self.X_num_train)
+            
 
     def hsstack_features(self):
         """Cette méthode combine les caractéristiques textuelles vectorisées et les caractéristiques numériques normalisées.
         Elle utilise la fonction hstack de scipy pour empiler horizontalement les matrices de caractéristiques
         et retourne les matrices d'entraînement et de test combinées.
         """
-        self.X_test_combined = hstack([self.X_text_test_tfidf, self.X_num_test_scaled])
-        self.X_train_combined = hstack([self.X_text_train_tfidf, self.X_num_train_scaled])
+        if not self.prediction_pipe:
+            self.X_train_combined = hstack([self.X_text_train_tfidf, self.X_num_train_scaled]) 
+            self.X_test_combined = hstack([self.X_text_test_tfidf, self.X_num_test_scaled])
+        if self.prediction_pipe:
+            self.X_train_combined = hstack([self.X_text_train_tfidf, self.X_num_train_scaled])

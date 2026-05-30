@@ -1,5 +1,13 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from xml.parsers.expat import model
 from sklearn.svm import LinearSVC
+from Gibberish_detector import GibberishDetector
+from NLP_Feat_Eng import NLP_Feat_Eng
+from Preprocessing import Preprocessing
+
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -12,10 +20,10 @@ import joblib
 
 
 class Model:
-    def __init__(self):
-        pass
+    def __init__(self, prediction_pipe=False):
+        self.prediction_pipe = prediction_pipe
 
-    def build_virgin_model_pipeline(self, X_train, y_train, X_test, y_test, model_path):
+    def build_virgin_model_pipeline(self, X_train, X_test, y_train, y_test, model_path):
         """Cette méthode exécute l'ensemble du pipeline de construction d'un modèle vierge.
         Elle entraîne un modèle à partir des données d'entraînement, le teste sur les données de test,
         évalue les performances du modèle et sauvegarde le modèle entraîné.
@@ -26,8 +34,29 @@ class Model:
         self.save_model(model, model_path)
         return evaluation_results
     
+    def AI_full_virgin_model_training_pipeline(self, df):
+        """Cette méthode exécute l'ensemble du pipeline de construction d'un modèle vierge à partir d'un DataFrame.
+            Elle effectue l'ingénierie des caractéristiques NLP sur le DataFrame, puis exécute le pipeline de prétraitement
+            pour préparer les données d'entraînement et de test, et enfin exécute le pipeline de construction du modèle vierge
+            pour entraîner, tester, évaluer et sauvegarder le modèle.
+            """
+        if df.shape[0] < 10:
+            raise ValueError("Le DataFrame doit contenir au moins 10 lignes pour entraîner un modèle.")
+        features = NLP_Feat_Eng(df).feature_engineering_full_pipeline()
+        X_train, X_test, y_train, y_test = Preprocessing(features).preprocessing_pipeline()
+        metrics = Model().build_virgin_model_pipeline(X_train, X_test, y_train, y_test, model_path="spam_classifier_model.joblib")
+        print(metrics)
+    
 
-    def retrain_model_pipeline(self, X_train, y_train, X_test, y_test, model_path):
+    def AI_full_retrain_model_pipeline(self, df):
+        if df.shape[0] < 10:
+            raise ValueError("Le DataFrame doit contenir au moins 10 lignes pour ré-entraîner un modèle.")
+        features = NLP_Feat_Eng(df).feature_engineering_full_pipeline()
+        X_train, X_test, y_train, y_test = Preprocessing(features).preprocessing_pipeline()
+        metrics = Model().__retrain_model_pipeline(X_train, X_test, y_train, y_test, model_path="spam_classifier_model.joblib")
+        print(metrics)
+
+    def __retrain_model_pipeline(self, X_train, X_test, y_train, y_test, model_path):
         """Cette méthode exécute l'ensemble du pipeline de rechargement d'un modèle existant.
         Elle charge un modèle existant, le réentraîne sur les nouvelles données d'entraînement,
         le teste sur les données de test, évalue les performances du modèle et sauvegarde le modèle mis à jour.
@@ -36,15 +65,21 @@ class Model:
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
         evaluation_results = self.evaluate_model(y_test, y_pred)
-        self.save_model(model, model_path)
+        self.save_model(model, f"retrained_{model_path}")
         return evaluation_results
         
+    def AI_full_prediction_pipeline(self, df):
+        features = NLP_Feat_Eng(df).feature_engineering_full_pipeline()
+        X = Preprocessing(features, self.prediction_pipe).preprocessing_pipeline()
+        model_path = "retrained_spam_classifier_model.joblib"
+        y_pred = self.predict(model_path, X)
+        return y_pred
 
     def train_model(self, X_train, y_train):
         """Cette méthode entraîne un modèle de classification à partir des données d'entraînement.
         Elle utilise un classificateur linéaire SVM pour apprendre à partir des caractéristiques d'entrée et des étiquettes de classe.
         """
-        model= LinearSVC()
+        model= LinearSVC(max_iter=10000)
         model.fit(X_train, y_train)
         return model
 
