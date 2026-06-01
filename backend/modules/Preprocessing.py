@@ -53,6 +53,7 @@ class Preprocessing:
         self.normalize_and_space_tokens()
         self.relace_inf_with_zero()
         self.drop_duplicates_()
+        self.memory_data()
         self.train_test_split()
         self.tfidf_vectorization(self.artifact_path)
         self.robust_scale_numeric_features(self.artifact_path)
@@ -141,6 +142,41 @@ class Preprocessing:
         et retourne le DataFrame modifié.
         """
         self.df = self.df.drop_duplicates(subset=["text_preprocessed"], keep="first").reset_index(drop=True)
+
+    def delete_memory_data(self):
+        memory_path = f"{self.artifact_path}/memory_df.parquet"
+
+        if os.path.exists(memory_path):
+            os.remove(memory_path)
+            logging.info("Fichier mémoire supprimé avec succès.")
+        else:
+            logging.info("Aucun fichier mémoire à supprimer.")
+
+    def memory_data(self):
+        memory_path = f"{self.artifact_path}/memory_df.parquet"
+        os.makedirs(self.artifact_path, exist_ok=True)
+
+        if "text_preprocessed" not in self.df.columns:
+            raise ValueError("La colonne text_preprocessed doit exister avant __memory_data().")
+
+        df_new = self.df.copy()
+        df_new = df_new.drop_duplicates(subset=["text_preprocessed"], keep="last")
+
+        if os.path.exists(memory_path):
+            df_memory = pd.read_parquet(memory_path)
+            df_memory = pd.concat([df_memory, df_new], ignore_index=True)
+            df_memory = df_memory.drop_duplicates(subset=["text_preprocessed"], keep="last")
+        else:
+            df_memory = df_new
+
+        df_memory.to_parquet(memory_path, index=False)
+        self.df = df_memory.copy()
+
+
+
+
+            
+
 
     def train_test_split(self,  test_size=0.2, random_state=42):
         """Cette méthode divise le DataFrame en ensembles d'entraînement et de test.

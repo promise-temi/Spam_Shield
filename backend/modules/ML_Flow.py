@@ -1,5 +1,7 @@
 import mlflow
 import mlflow.sklearn
+from mlflow.tracking import MlflowClient 
+import logging
 mlflow.set_tracking_uri(
     "http://127.0.0.1:5000"
 )
@@ -26,10 +28,27 @@ class ML_Flow_Operations:
 
     
     def get_latest_model(self):
-        return mlflow.sklearn.load_model("models:/SpamShieldClassifier/1")
+        return mlflow.sklearn.load_model("models:/SpamShieldClassifier/latest")
     
     def get_latest_artefact(self, pkl_path):
         runs = mlflow.search_runs(order_by=["start_time DESC"], max_results=1)
         run_id = runs.iloc[0]["run_id"]
         return mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path=pkl_path)
 
+    from mlflow.tracking import MlflowClient
+
+    def delete_all_models(self, model_name="SpamShieldClassifier"):
+        client = MlflowClient()
+
+        # Supprimer toutes les versions du modèle
+        versions = client.search_model_versions(f"name='{model_name}'")
+        for v in versions:
+            client.delete_model_version(name=model_name, version=v.version)
+
+        # Supprimer le modèle du registry
+        try:
+            client.delete_registered_model(model_name)
+        except:
+            pass
+
+        logging.info(f"Tous les modèles et artefacts liés à '{model_name}' ont été supprimés.")

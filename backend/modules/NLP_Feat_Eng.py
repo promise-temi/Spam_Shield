@@ -254,9 +254,6 @@ class NLP_Feat_Eng:
         return self.df
 
 
-
-
-
     def message_length(self):
         """Cette méthode calcule la longueur de chaque message et 
         stocke le résultat dans une nouvelle colonne 'msg_length' du DataFrame.
