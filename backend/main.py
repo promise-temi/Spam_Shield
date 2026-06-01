@@ -1,5 +1,9 @@
 import pandas as pd
 from modules.Model import Model
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+
 
 # build virgin model pipeline
 model_ = Model()

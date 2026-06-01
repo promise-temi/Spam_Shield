@@ -14,8 +14,13 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import RobustScaler, MinMaxScaler
 from scipy.sparse import hstack
 import joblib
+import sys
+import os
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
+from ML_Flow import ML_Flow_Operations
 
 class Preprocessing:
     def __init__(self, df, prediction_pipe=False):
@@ -40,6 +45,7 @@ class Preprocessing:
         Elle applique les différentes étapes de nettoyage et de transformation des données
         pour préparer les textes à l'analyse ultérieure.
         """
+        logging.info("Début du pipeline de preprocessing NLP")
         self.df["text_preprocessed"] = self.df[self.text_col]
         self.clean_stopwords()
         self.apply_stemming()
@@ -50,6 +56,7 @@ class Preprocessing:
         self.tfidf_vectorization()
         self.robust_scale_numeric_features()
         self.hsstack_features()
+        logging.info("Fin du pipeline de preprocessing NLP")
         if self.prediction_pipe:
             return self.X_train_combined
         
@@ -172,10 +179,13 @@ class Preprocessing:
             
             self.X_text_train_tfidf = vectorizer.fit_transform(self.X_text_train)
             self.X_text_test_tfidf = vectorizer.transform(self.X_text_test)
-            joblib.dump(vectorizer, "tfidf.pkl")
+            logging.info("Enregistrement du nouvel artefact TF-IDF dans ML Flow")
+            ML_Flow_Operations().save_model_artefact("tfidf.pkl")
 
         if self.prediction_pipe:
-            vectorizer = joblib.load("tfidf.pkl")
+            logging.info("Réccupération du précédent artefact TF-IDF depuis ML Flow")
+            artefact = ML_Flow_Operations().get_latest_artefact("tfidf.pkl")
+            vectorizer = joblib.load(artefact)
             self.X_text_train_tfidf = vectorizer.transform(self.X_text_train)
 
 
@@ -194,9 +204,12 @@ class Preprocessing:
             
             self.X_num_train_scaled = scaler.fit_transform(self.X_num_train)
             self.X_num_test_scaled = scaler.transform(self.X_num_test)
-            joblib.dump(scaler, "robust_scaler.pkl")
+            logging.info("Enregistrement du nouvel artefact Robust Scaler dans ML Flow")
+            ML_Flow_Operations().save_model_artefact("robust_scaler.pkl")
         if self.prediction_pipe:
-            scaler = joblib.load("robust_scaler.pkl")
+            logging.info("Réccupération du précédent artefact Robust Scaler depuis ML Flow")
+            artefact = ML_Flow_Operations().get_latest_artefact("robust_scaler.pkl")
+            scaler = joblib.load(artefact)
             self.X_num_train_scaled = scaler.transform(self.X_num_train)
             
 

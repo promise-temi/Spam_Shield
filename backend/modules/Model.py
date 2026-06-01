@@ -1,5 +1,7 @@
 import os
 import sys
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from xml.parsers.expat import model
@@ -7,6 +9,7 @@ from sklearn.svm import LinearSVC
 from Gibberish_detector import GibberishDetector
 from NLP_Feat_Eng import NLP_Feat_Eng
 from Preprocessing import Preprocessing
+from ML_Flow import ML_Flow_Operations
 
 from sklearn.metrics import (
     accuracy_score,
@@ -23,7 +26,7 @@ class Model:
     def __init__(self, prediction_pipe=False):
         self.prediction_pipe = prediction_pipe
 
-    def build_virgin_model_pipeline(self, X_train, X_test, y_train, y_test, model_path):
+    def build_virgin_model_pipeline(self, X_train, X_test, y_train, y_test):
         """Cette méthode exécute l'ensemble du pipeline de construction d'un modèle vierge.
         Elle entraîne un modèle à partir des données d'entraînement, le teste sur les données de test,
         évalue les performances du modèle et sauvegarde le modèle entraîné.
@@ -31,7 +34,7 @@ class Model:
         model = self.train_model(X_train, y_train)
         y_pred = self.test_model(model, X_test)
         evaluation_results = self.evaluate_model(y_test, y_pred)
-        self.save_model(model, model_path)
+        self.save_model_mlflow(model)
         return evaluation_results
     
     def AI_full_virgin_model_training_pipeline(self, df):
@@ -40,39 +43,42 @@ class Model:
             pour préparer les données d'entraînement et de test, et enfin exécute le pipeline de construction du modèle vierge
             pour entraîner, tester, évaluer et sauvegarder le modèle.
             """
+        logging.info("Début du pipeline de création d'un model de prédiction vierge")
         if df.shape[0] < 10:
             raise ValueError("Le DataFrame doit contenir au moins 10 lignes pour entraîner un modèle.")
         features = NLP_Feat_Eng(df).feature_engineering_full_pipeline()
         X_train, X_test, y_train, y_test = Preprocessing(features).preprocessing_pipeline()
-        metrics = Model().build_virgin_model_pipeline(X_train, X_test, y_train, y_test, model_path="spam_classifier_model.joblib")
-        print(metrics)
+        metrics = Model().build_virgin_model_pipeline(X_train, X_test, y_train, y_test)
+        logging.info("Fin du pipeline - Enregistrement du model dans ML Flow")
+        ML_Flow_Operations().save_metrics(metrics)
     
 
     def AI_full_retrain_model_pipeline(self, df):
+        logging.info("Début du pipeline de réentraînement d'un model de prédiction existant")
         if df.shape[0] < 10:
             raise ValueError("Le DataFrame doit contenir au moins 10 lignes pour ré-entraîner un modèle.")
         features = NLP_Feat_Eng(df).feature_engineering_full_pipeline()
         X_train, X_test, y_train, y_test = Preprocessing(features).preprocessing_pipeline()
-        metrics = Model().__retrain_model_pipeline(X_train, X_test, y_train, y_test, model_path="spam_classifier_model.joblib")
-        print(metrics)
+        metrics = Model().__retrain_model_pipeline(X_train, X_test, y_train, y_test)
+        logging.info("Fin du pipeline - Enregistrement du model dans ML Flow")
+        ML_Flow_Operations().save_metrics(metrics)
 
-    def __retrain_model_pipeline(self, X_train, X_test, y_train, y_test, model_path):
+    def __retrain_model_pipeline(self, X_train, X_test, y_train, y_test):
         """Cette méthode exécute l'ensemble du pipeline de rechargement d'un modèle existant.
         Elle charge un modèle existant, le réentraîne sur les nouvelles données d'entraînement,
         le teste sur les données de test, évalue les performances du modèle et sauvegarde le modèle mis à jour.
         """
-        model = joblib.load(model_path)
+        model = ML_Flow_Operations().get_latest_model()
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
         evaluation_results = self.evaluate_model(y_test, y_pred)
-        self.save_model(model, f"retrained_{model_path}")
+        self.save_model_mlflow(model)
         return evaluation_results
         
     def AI_full_prediction_pipeline(self, df):
         features = NLP_Feat_Eng(df).feature_engineering_full_pipeline()
         X = Preprocessing(features, self.prediction_pipe).preprocessing_pipeline()
-        model_path = "retrained_spam_classifier_model.joblib"
-        y_pred = self.predict(model_path, X)
+        y_pred = self.predict(X)
         return y_pred
 
     def train_model(self, X_train, y_train):
@@ -115,14 +121,17 @@ class Model:
             "classification_report": class_report
         }
     
-    def save_model(self, model, file_path):
+    def save_model_mlflow(self, model):
+        ML_Flow_Operations().save_model(model)
+    
+    def save_model_local(self, model, file_path):
         joblib.dump(model, file_path)
 
 
-    def predict(self, model_path, X):
+    def predict(self, X):
         """Cette méthode charge un modèle à partir d'un chemin de fichier spécifié et utilise ce modèle pour faire des prédictions sur les données d'entrée.
         Elle retourne les étiquettes prédites par le modèle.
         """
-        model = joblib.load(model_path)
+        model = ML_Flow_Operations().get_latest_model()
         y_pred = model.predict(X)
         return y_pred

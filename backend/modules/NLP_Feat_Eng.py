@@ -1,9 +1,11 @@
 
 import re
-import math
 import numpy as np
 import pandas as pd
 import os
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 urgency_words = [
     "urgent", "immédiat", "immédiate", "immédiatement",
@@ -184,6 +186,7 @@ class NLP_Feat_Eng:
         """Cette méthode exécute l'ensemble du pipeline de feature engineering dans l'ordre en appelant les 
         différentes méthodes de calcul des caractéristiques et de transformation du texte.
         """
+        logging.info("Début du pipeline de feature engineering NLP")
         # --- Méthodes sur texte brut ---
         self.message_length()
         self.word_count()
@@ -244,8 +247,11 @@ class NLP_Feat_Eng:
         self.replace_greetings_politeness_signatures()
         self.replace_digits()
         self.clean_special_characters()
+        logging.info("Fin du pipeline de feature engineering NLP")
         # --- Mise à jour du corpus ---
+        logging.info("Mise à jour ou création du corpus de mots connu")
         self.update_corpus(self.corpus_path)
+
         return self.df
 
 

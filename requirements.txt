@@ -1,0 +1,17 @@
+pandas
+pyarrow
+fastparquet
+numpy
+
+kagglehub[pandas-datasets]
+
+nltk
+
+matplotlib
+plotly
+
+pytest
+
+scikit-learn
+joblib
+mlflow

@@ -5,6 +5,7 @@ import sys
 import pytest
 import pandas as pd
 
+
 BASE_DIR = os.path.dirname(__file__)  
 FILE_PATH = os.path.join(BASE_DIR, "test_ressources", "spam_ham_dataset.parquet")
 
