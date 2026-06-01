@@ -23,13 +23,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from ML_Flow import ML_Flow_Operations
 
 class Preprocessing:
-    def __init__(self, df, prediction_pipe=False):
+    def __init__(self, df, artifact_path="", prediction_pipe=False):
         self.df = df
         self.__set_nltk_french_stop_words()
         self.text_col = "text_final"
         self.target_col = "label"
-        self.exclude_cols = ["text", "label", "text_transformed", "text_final", "text_preprocessed", 'text_lower']
+        self.exclude_cols = ["text", "label", "text_transformed", "text_final", "text_preprocessed", 'text_lower', 'lang']
         self.prediction_pipe = prediction_pipe
+        self.artifact_path = artifact_path
 
     def __set_nltk_french_stop_words(self):
         """Cette méthode télécharge les stop words depuis nltk, 
@@ -53,8 +54,8 @@ class Preprocessing:
         self.relace_inf_with_zero()
         self.drop_duplicates_()
         self.train_test_split()
-        self.tfidf_vectorization()
-        self.robust_scale_numeric_features()
+        self.tfidf_vectorization(self.artifact_path)
+        self.robust_scale_numeric_features(self.artifact_path)
         self.hsstack_features()
         logging.info("Fin du pipeline de preprocessing NLP")
         if self.prediction_pipe:
@@ -169,7 +170,7 @@ class Preprocessing:
                 stratify=self.y
             )
 
-    def tfidf_vectorization(self):
+    def tfidf_vectorization(self, artifact_path):
         """Cette méthode applique la vectorisation TF-IDF aux textes d'entraînement et de test.
         Elle utilise la classe TfidfVectorizer de scikit-learn pour transformer les textes en matrices de caractéristiques
         basées sur la fréquence des termes, puis retourne les matrices d'entraînement et de test.
@@ -180,11 +181,12 @@ class Preprocessing:
             self.X_text_train_tfidf = vectorizer.fit_transform(self.X_text_train)
             self.X_text_test_tfidf = vectorizer.transform(self.X_text_test)
             logging.info("Enregistrement du nouvel artefact TF-IDF dans ML Flow")
-            ML_Flow_Operations().save_model_artefact("tfidf.pkl")
+            joblib.dump(vectorizer, f"{artifact_path}/tfidf.pkl")
+            ML_Flow_Operations().save_model_artefact(f"{artifact_path}/tfidf.pkl")
 
         if self.prediction_pipe:
             logging.info("Réccupération du précédent artefact TF-IDF depuis ML Flow")
-            artefact = ML_Flow_Operations().get_latest_artefact("tfidf.pkl")
+            artefact = ML_Flow_Operations().get_latest_artefact(f"{artifact_path}/tfidf.pkl")
             vectorizer = joblib.load(artefact)
             self.X_text_train_tfidf = vectorizer.transform(self.X_text_train)
 
@@ -194,7 +196,7 @@ class Preprocessing:
             
 
     
-    def robust_scale_numeric_features(self):
+    def robust_scale_numeric_features(self, artifact_path):
         """Cette méthode applique la normalisation robuste aux caractéristiques numériques d'entraînement et de test.
         Elle utilise la classe RobustScaler de scikit-learn pour transformer les caractéristiques numériques
         en utilisant la médiane et l'écart interquartile, puis retourne les matrices d'entraînement et de test normalisées.
@@ -205,10 +207,11 @@ class Preprocessing:
             self.X_num_train_scaled = scaler.fit_transform(self.X_num_train)
             self.X_num_test_scaled = scaler.transform(self.X_num_test)
             logging.info("Enregistrement du nouvel artefact Robust Scaler dans ML Flow")
-            ML_Flow_Operations().save_model_artefact("robust_scaler.pkl")
+            joblib.dump(scaler, f"{artifact_path}/robust_scaler.pkl")
+            ML_Flow_Operations().save_model_artefact(f"{artifact_path}/robust_scaler.pkl")
         if self.prediction_pipe:
             logging.info("Réccupération du précédent artefact Robust Scaler depuis ML Flow")
-            artefact = ML_Flow_Operations().get_latest_artefact("robust_scaler.pkl")
+            artefact = ML_Flow_Operations().get_latest_artefact(f"{artifact_path}/robust_scaler.pkl")
             scaler = joblib.load(artefact)
             self.X_num_train_scaled = scaler.transform(self.X_num_train)
             

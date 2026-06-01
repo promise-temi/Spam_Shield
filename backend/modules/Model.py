@@ -37,7 +37,7 @@ class Model:
         self.save_model_mlflow(model)
         return evaluation_results
     
-    def AI_full_virgin_model_training_pipeline(self, df, corpus_path):
+    def AI_full_virgin_model_training_pipeline(self, df, corpus_path, artifact_path):
         """Cette méthode exécute l'ensemble du pipeline de construction d'un modèle vierge à partir d'un DataFrame.
             Elle effectue l'ingénierie des caractéristiques NLP sur le DataFrame, puis exécute le pipeline de prétraitement
             pour préparer les données d'entraînement et de test, et enfin exécute le pipeline de construction du modèle vierge
@@ -47,19 +47,21 @@ class Model:
         if df.shape[0] < 10:
             raise ValueError("Le DataFrame doit contenir au moins 10 lignes pour entraîner un modèle.")
         features = NLP_Feat_Eng(df, corpus_path).feature_engineering_full_pipeline()
-        X_train, X_test, y_train, y_test = Preprocessing(features).preprocessing_pipeline()
-        metrics = Model().build_virgin_model_pipeline(X_train, X_test, y_train, y_test)
+        X_train, X_test, y_train, y_test = Preprocessing(features, artifact_path).preprocessing_pipeline()
+        self.X_train = X_train
+        metrics = self.build_virgin_model_pipeline(X_train, X_test, y_train, y_test)
         logging.info("Fin du pipeline - Enregistrement du model dans ML Flow")
         ML_Flow_Operations().save_metrics(metrics)
     
 
-    def AI_full_retrain_model_pipeline(self, df, corpus_path):
+    def AI_full_retrain_model_pipeline(self, df, corpus_path, artifact_path):
         logging.info("Début du pipeline de réentraînement d'un model de prédiction existant")
         if df.shape[0] < 10:
             raise ValueError("Le DataFrame doit contenir au moins 10 lignes pour ré-entraîner un modèle.")
         features = NLP_Feat_Eng(df, corpus_path).feature_engineering_full_pipeline()
-        X_train, X_test, y_train, y_test = Preprocessing(features).preprocessing_pipeline()
-        metrics = Model().__retrain_model_pipeline(X_train, X_test, y_train, y_test)
+        X_train, X_test, y_train, y_test = Preprocessing(features, artifact_path).preprocessing_pipeline()
+        self.X_train = X_train
+        metrics = self.__retrain_model_pipeline(X_train, X_test, y_train, y_test)
         logging.info("Fin du pipeline - Enregistrement du model dans ML Flow")
         ML_Flow_Operations().save_metrics(metrics)
 
@@ -75,9 +77,9 @@ class Model:
         self.save_model_mlflow(model)
         return evaluation_results
         
-    def AI_full_prediction_pipeline(self, df, corpus_path):
+    def AI_full_prediction_pipeline(self, df, corpus_path, artifact_path):
         features = NLP_Feat_Eng(df, corpus_path).feature_engineering_full_pipeline()
-        X = Preprocessing(features, self.prediction_pipe).preprocessing_pipeline()
+        X = Preprocessing(features, artifact_path, self.prediction_pipe).preprocessing_pipeline()
         y_pred = self.predict(X)
         return y_pred
 
@@ -117,6 +119,7 @@ class Model:
             "precision": precision,
             "recall": recall,
             "f1_score": f1,
+            "training_nb": int(self.X_train.shape[0]),
             "confusion_matrix": conf_matrix,
             "classification_report": class_report
         }

@@ -16,7 +16,7 @@ class ML_Flow_Operations:
         mlflow.log_metric("precision", metrics["precision"])
         mlflow.log_metric("recall", metrics["recall"])
         mlflow.log_metric("f1_score", metrics["f1_score"])
-        
+        mlflow.log_metric("training_nb", metrics["training_nb"])
 
     def save_model(self, model):
         mlflow.sklearn.log_model(model, artifact_path="model", registered_model_name="SpamShieldClassifier")
