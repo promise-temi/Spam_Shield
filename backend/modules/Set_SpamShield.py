@@ -1,7 +1,9 @@
 import pandas as pd
 import kagglehub
 import os
-import shutil
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 
 
@@ -16,11 +18,15 @@ class SET_Spam_Shield_Dependances:
         """
         Retourne un dataframe apres avoir réccupéré les données dont le projet a besoin
         """
+        logging.info('Début du téléchargement des données')
         self.Multiligual_Spam_Dataset()
         self.Phishing_Email_Dataset()
         self.Professionnal_mails_fr()
         self.SMS_spam_detection_multilingual()
-        self.get_inatial_df(lang)
+        logging.info('Fin du téléchargement des données')
+        logging.info('Concaténation des données en dataset exploitable')
+        df = self.get_inatial_df(lang)
+        return df
 
 
     def __create_dir_if_not_exist(self, output_dir):
@@ -55,12 +61,14 @@ class SET_Spam_Shield_Dependances:
         df_filtered_eng = df_filtered[['labels', 'text']]
         df_filtered_eng['lang'] = 'eng'
         df_filtered_eng = df_filtered_eng.rename(columns={'labels':'label'})
+        logging.info(f"Multiligual_Spam_Dataset eng - {df_filtered_eng.shape}")
         self.final_df.append(df_filtered_eng)
         
         # Messages Francais
         df_filtered_fr = df_filtered[['labels', 'text_fr']]
         df_filtered_fr['lang'] = 'fr'
         df_filtered_fr = df_filtered_fr.rename(columns={'labels':'label', 'text_fr':'text'})
+        logging.info(f"Multiligual_Spam_Dataset fr - {df_filtered_fr.shape}")
         self.final_df.append(df_filtered_fr)
          
 
@@ -71,23 +79,29 @@ class SET_Spam_Shield_Dependances:
         try:
             kagglehub.dataset_download("naserabdullahalam/phishing-email-dataset", output_dir=output_dir)
         except Exception as e:
-            print(f"Kaggle dataset not available : {e}")
+            logging.error(f"Kaggle dataset not available : {e}")
             return
 
         # pour chaques fichiers
         for file_name in os.listdir(output_dir):
-            if file_name == '.complete':
+            if file_name == '.complete' :
                 continue
-            df = pd.read_csv(f'{output_dir}/{file_name}')
-            interesting_cols = ['label','body']
+            try:
+                df = pd.read_csv(f'{output_dir}/{file_name}')
+                interesting_cols = ['label','body']
 
-            #identification des colonnes d'interet
-            df_filtered = df[interesting_cols]
+                #identification des colonnes d'interet
+                df_filtered = df[interesting_cols]
 
-            # les messages sont uniquement anglais
-            df_filtered = df_filtered.rename(columns={'body':'text'})
-            df_filtered['lang'] = 'eng'
-            self.final_df.append(df_filtered)
+                # les messages sont uniquement anglais
+                df_filtered = df_filtered.rename(columns={'body':'text'})
+                df_filtered['lang'] = 'eng'
+                logging.info(f"Phishing_Email_Dataset - {file_name} - {df_filtered.shape}")
+                self.final_df.append(df_filtered)
+            except Exception as e:
+                logging.debug(e)
+                continue
+                
             
 
 
@@ -97,11 +111,12 @@ class SET_Spam_Shield_Dependances:
         try:
             df = pd.read_json(output_dir)
         except Exception as e:
-            print(f"Local dataset not available : {e}")
+            logging.error(f"Kaggle dataset not available : {e}")
             return
 
         # les collones sont deja standardisé c'est un dataset custum, réalisé par mes soins
         df['lang'] = 'fr'
+        logging.info(f"Professionnal_mails_fr - {df.shape}")
         self.final_df.append(df)
         
 
@@ -109,9 +124,9 @@ class SET_Spam_Shield_Dependances:
         output_dir = f"{self.raw_data_dir}/sms_spam_detection_multilingual"
         self.__create_dir_if_not_exist(output_dir)
         try:
-            path = kagglehub.dataset_download("debapampal2002/sms-dataset1", output_dir=output_dir)
+            kagglehub.dataset_download("debapampal2002/sms-dataset1", output_dir=output_dir)
         except Exception as e:
-            print(f"Kaggle dataset not available : {e}")
+            logging.error(f"Kaggle dataset not available : {e}")
             return
 
         df = pd.read_csv(f'{output_dir}/dataset.csv')
@@ -125,6 +140,7 @@ class SET_Spam_Shield_Dependances:
         df_fr['lang'] = 'fr'
         df_fr = df_fr.replace({'ham':0, 'spam':1, }).rename(columns={'labels':'label'})
         df_fr['label'] = df_fr['label'].astype(int)
+        logging.info(f"SMS_spam_detection_multilingual fr- {df_fr.shape}")
         self.final_df.append(df_fr)
 
         # netoyage et preparation des messages anglais
@@ -133,6 +149,7 @@ class SET_Spam_Shield_Dependances:
         df_eng['lang'] = 'eng'
         df_eng = df_eng.replace({'ham':0, 'spam':1, }).rename(columns={'labels':'label'})
         df_eng['label'] = df_eng['label'].astype(int)
+        logging.info(f"SMS_spam_detection_multilingual eng - {df_eng.shape}")
         self.final_df.append(df_eng)
 
 
@@ -140,7 +157,5 @@ class SET_Spam_Shield_Dependances:
         # creation du dataset final
         df_all = pd.concat(self.final_df)
         df_all = df_all[df_all['lang'] == lang]
-        df_all = df_all.dropna(subset=["text"])
-        # supression des doublons
-        df_all = df_all.drop_duplicates(subset=['text'])
+        logging.info(f"Global dataframe created - {df_all.shape}")
         return df_all
