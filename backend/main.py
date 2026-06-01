@@ -12,7 +12,7 @@ df_messages = SET_Spam_Shield_Dependances(raw_data_dir="backend/modules/data/raw
 print(type(df_messages))
 
 model_ = Model()
-model_.AI_full_virgin_model_training_pipeline(df_messages)
+model_.AI_full_virgin_model_training_pipeline(df_messages, "backend/modules/data/corpus.parquet")
 
 # model_ = Model()
 # model_.AI_full_virgin_model_training_pipeline(df=pd.read_parquet("data/spam_ham_dataset.parquet"))

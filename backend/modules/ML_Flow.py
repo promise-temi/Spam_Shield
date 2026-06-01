@@ -1,8 +1,10 @@
 import mlflow
+import mlflow.sklearn
 mlflow.set_tracking_uri(
-    "http://localhost:5000"
+    "http://127.0.0.1:5000"
 )
 
+mlflow.set_experiment("SpamShield")
 
 class ML_Flow_Operations:
     def __init__(self):
@@ -17,14 +19,14 @@ class ML_Flow_Operations:
         
 
     def save_model(self, model):
-        mlflow.sklearn.log_model(model, "SpamShieldClassifier")
+        mlflow.sklearn.log_model(model, artifact_path="model", registered_model_name="SpamShieldClassifier")
 
     def save_model_artefact(self, pkl_path):
-        mlflow.log_artifact(pkl_path)
+        mlflow.log_artifact(pkl_path, artifact_path="artifacts")
 
     
     def get_latest_model(self):
-        return mlflow.sklearn.load_model("models:/SpamShieldClassifier/latest")
+        return mlflow.sklearn.load_model("models:/SpamShieldClassifier/1")
     
     def get_latest_artefact(self, pkl_path):
         runs = mlflow.search_runs(order_by=["start_time DESC"], max_results=1)

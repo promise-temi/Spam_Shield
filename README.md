@@ -7,3 +7,5 @@ http://127.0.0.1:5000
 
 
 pip install -r requirements.txt
+
+mlflow ui --host 0.0.0.0 --port 5000

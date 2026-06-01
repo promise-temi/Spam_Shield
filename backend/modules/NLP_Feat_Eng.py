@@ -79,8 +79,9 @@ signature_words = [
 
 
 class NLP_Feat_Eng:
-    def __init__(self, df):
+    def __init__(self, df, corpus_path=""):
         self.df = df
+        self.corpus_path = corpus_path
 
         self.urgency_words = urgency_words
         self.financial_words = financial_words
@@ -179,15 +180,14 @@ class NLP_Feat_Eng:
         self.regex_politeness = r"\b(" + "|".join(self.politeness_words) + r")\b"
         self.regex_signature = r"\b(" + "|".join(self.signature_words) + r")\b"
 
-        self.corpus_path = "data/corpus.parquet"
+        self.corpus_path = self.corpus_path
 
 
-    def feature_engineering_full_pipeline(self):
-        """Cette méthode exécute l'ensemble du pipeline de feature engineering dans l'ordre en appelant les 
-        différentes méthodes de calcul des caractéristiques et de transformation du texte.
-        """
+    def feature_engineering_full_pipeline(self, update_corpus=True):
         logging.info("Début du pipeline de feature engineering NLP")
-        # --- Méthodes sur texte brut ---
+
+        self.df["text"] = self.df["text"].fillna("").astype(str)
+
         self.message_length()
         self.word_count()
         self.count_declarative_sentences()
@@ -219,10 +219,8 @@ class NLP_Feat_Eng:
         self.whitespace_count()
         self.special_character_ratio()
 
-        # --- Normalisation ---
         self.lower_the_text()
 
-        # --- Comptages lexicaux ---
         self.count_psycho_ugency_words()
         self.count_financial_words()
         self.count_threat_words()
@@ -236,21 +234,22 @@ class NLP_Feat_Eng:
         self.count_politeness()
         self.count_signatures()
 
-        # --- Initialisation du texte transformé ---
         self.df["text_transformed"] = self.df["text_lower"]
 
-        # --- Remplacements ---
         self.replace_money_info()
         self.replace_phone_info()
         self.replace_email_info()
+        self.replace_psycho_urgency_words()
         self.replace_urls()
         self.replace_greetings_politeness_signatures()
         self.replace_digits()
         self.clean_special_characters()
+
         logging.info("Fin du pipeline de feature engineering NLP")
-        # --- Mise à jour du corpus ---
-        logging.info("Mise à jour ou création du corpus de mots connu")
-        self.update_corpus(self.corpus_path)
+
+        if update_corpus:
+            logging.info("Mise à jour ou création du corpus de mots connu")
+            self.update_corpus(self.corpus_path)
 
         return self.df
 
@@ -266,10 +265,7 @@ class NLP_Feat_Eng:
 
 
     def word_count(self):
-        """Cette méthode calcule le nombre de mots dans chaque message et 
-        stocke le résultat dans une nouvelle colonne 'msg_word_count' du DataFrame.
-        """
-        self.df['msg_word_count'] = self.df['text'].str.split(' ').str.len()
+        self.df["msg_word_count"] = self.df["text"].str.split().str.len()
 
 
     def count_declarative_sentences(self):
@@ -321,26 +317,16 @@ class NLP_Feat_Eng:
 
 
     def average_word_length(self):
-        """Cette méthode calcule la longueur moyenne des mots dans chaque message 
-        en utilisant une expression régulière et stocke le résultat dans une nouvelle 
-        colonne 'average_word_length' du DataFrame.
-        """
-        self.df["average_word_length"] = (
-            self.df["text"]
-            .str.split()
-            .apply(lambda words: sum(len(w) for w in words) / len(words) if words else 0)
+        words = self.df["text"].str.findall(r"\b\w+\b")
+        self.df["average_word_length"] = words.apply(
+            lambda x: sum(map(len, x)) / len(x) if x else 0
         )
 
 
     def median_word_length(self):
-        """Cette méthode calcule la longueur médiane des mots dans chaque message
-        en utilisant une expression régulière et stocke le résultat dans une nouvelle 
-        colonne 'median_word_length' du DataFrame.
-        """
-        self.df["median_word_length"] = (
-            self.df["text"]
-            .str.split()
-            .apply(lambda words: np.median([len(w) for w in words]) if words else 0)
+        words = self.df["text"].str.findall(r"\b\w+\b")
+        self.df["median_word_length"] = words.apply(
+            lambda x: float(np.median([len(w) for w in x])) if x else 0
         )
 
 
@@ -361,12 +347,12 @@ class NLP_Feat_Eng:
 
 
     def uppercase_ratio(self):
-        """Cette méthode calcule le ratio de lettres majuscules par rapport aux lettres minuscules dans chaque message 
-        en utilisant les colonnes 'uppercase_count' et 'lowercase_count' et stocke le résultat dans une nouvelle 
-        colonne 'uppercase_ratio' du DataFrame.
-        """
-        self.df['uppercase_ratio'] = self.df['uppercase_count'] / self.df['lowercase_count'] * 100
-
+        total_letters = self.df["uppercase_count"] + self.df["lowercase_count"]
+        self.df["uppercase_ratio"] = np.where(
+            total_letters > 0,
+            self.df["uppercase_count"] / total_letters * 100,
+            0
+        )
 
     def digit_count(self):
         """Cette méthode compte le nombre de chiffres dans chaque message 
@@ -497,12 +483,11 @@ class NLP_Feat_Eng:
 
 
     def special_character_ratio(self):
-        """Cette méthode calcule le ratio de caractères spéciaux par rapport à la longueur totale du message 
-        en utilisant les colonnes 'special_character_count' et 'msg_length' et stocke le résultat dans une nouvelle 
-        colonne 'special_character_ratio' du DataFrame.
-        """
-        self.df["special_character_ratio"] = self.df["special_character_count"] / self.df["msg_length"] * 100
-
+        self.df["special_character_ratio"] = np.where(
+            self.df["msg_length"] > 0,
+            self.df["special_character_count"] / self.df["msg_length"] * 100,
+            0
+        )
 
     def lower_the_text(self):
         """Cette méthode convertit le texte de chaque message en minuscules 
@@ -611,19 +596,19 @@ class NLP_Feat_Eng:
 
 
     def replace_money_info(self):
-        """Cette méthode remplace les mentions d'argent dans le texte de chaque message 
-        par un token générique '[MONEY]' en utilisant des expressions régulières.
-        """
-        # MONEY
-        self.df["text_transformed"] = self.df["text_lower"].str.replace(self.regex_money_digits, "[MONEY]", regex=True) 
-        self.df["text_transformed"] = self.df["text_lower"].str.replace(self.regex_money_words, "[MONEY]", regex=True) 
+        self.df["text_transformed"] = (
+            self.df["text_transformed"]
+            .str.replace(self.regex_money_digits, "[MONEY]", regex=True)
+            .str.replace(self.regex_money_words, "[MONEY]", regex=True)
+        )
 
     def replace_phone_info(self):
-        """Cette méthode remplace les numéros de téléphone dans le texte de chaque message
-        par un token générique '[PHONE]' en utilisant une expression régulière.
-        """    
-        self.df["text_transformed"] = self.df["text_lower"].str.replace(self.regex_phone, "[PHONE]", regex=True)
-    
+        self.df["text_transformed"] = self.df["text_transformed"].str.replace(
+            self.regex_phone,
+            "[PHONE]",
+            regex=True
+        )
+
     def replace_email_info(self):
         """Cette méthode remplace les adresses e-mail dans le texte de chaque message
         par des tokens génériques en utilisant des expressions régulières pour différents types d'e-mails.
@@ -690,18 +675,34 @@ class NLP_Feat_Eng:
         return text
     
     def clean_special_characters(self):
-        """Cette méthode applique la suppression des caractères spéciaux à la colonne 'text_transformed'
-        et stocke le résultat dans une nouvelle colonne 'text_final' du DataFrame.
-        """
-        self.df["text_final"] = self.df["text_transformed"].apply(self.remove_special_chars)
-
+        self.df["text_final"] = (
+            self.df["text_transformed"]
+            .str.replace(r"[-']", " ", regex=True)
+            .str.replace(r"[^a-zA-ZÀ-ÿ0-9\s\[\]]", " ", regex=True)
+            .str.replace(r"\s+", " ", regex=True)
+            .str.strip()
+        )
     
     def update_corpus(self, corpus_path):
+        os.makedirs(os.path.dirname(corpus_path), exist_ok=True)
+
+        new_tokens = (
+            self.df["text_final"]
+            .dropna()
+            .str.split()
+            .explode()
+            .dropna()
+            .drop_duplicates()
+            .to_frame("token")
+            .reset_index(drop=True)
+        )
+
         if os.path.exists(corpus_path):
-            df_corpus = pd.read_parquet(corpus_path)
-            df_corpus = pd.concat([df_corpus, self.df['text_final'].str.split(expand=True).stack().reset_index(level=1, drop=True).to_frame('token').reset_index(drop=True)])
+            old_tokens = pd.read_parquet(corpus_path)
+            df_corpus = pd.concat([old_tokens, new_tokens], ignore_index=True)
+            df_corpus = df_corpus.drop_duplicates(subset=["token"], keep="first")
         else:
-            df_corpus = self.df['text_final'].str.split(expand=True).stack().reset_index(level=1, drop=True).to_frame('token').reset_index(drop=True)
-        df_corpus = df_corpus.drop_duplicates(subset=['token'], keep='first').dropna().reset_index(drop=True)
+            df_corpus = new_tokens
+
         df_corpus.to_parquet(corpus_path, index=False)
         

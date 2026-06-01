@@ -221,7 +221,7 @@ __marimo__/
 *.csv
 *.parquet
 *.complete
-*_ignore.json
+*.json
 /notebooks/
 
 .pytest_cache/

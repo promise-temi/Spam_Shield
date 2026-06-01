@@ -4,6 +4,8 @@ fastparquet
 numpy
 
 kagglehub[pandas-datasets]
+kagglehub
+kagglesdk
 
 nltk
 
