@@ -28,7 +28,7 @@ class Preprocessing:
         self.__set_nltk_french_stop_words()
         self.text_col = "text_final"
         self.target_col = "label"
-        self.exclude_cols = ["text", "label", "text_transformed", "text_final", "text_preprocessed", 'text_lower', 'lang']
+        self.exclude_cols = ["text", "label", "text_transformed", "text_final", "text_preprocessed", 'text_lower', 'lang', 'sample_weight']
         self.prediction_pipe = prediction_pipe
         self.artifact_path = artifact_path
 
@@ -62,7 +62,7 @@ class Preprocessing:
         if self.prediction_pipe:
             return self.X_train_combined
         
-        return self.X_train_combined, self.X_test_combined, self.y_train, self.y_test
+        return self.X_train_combined, self.X_test_combined, self.y_train, self.y_test, self.sample_weight_train, self.sample_weight_test
 
 
     def remove_stopwords(self, text):
@@ -158,19 +158,27 @@ class Preprocessing:
 
         if "text_preprocessed" not in self.df.columns:
             raise ValueError("La colonne text_preprocessed doit exister avant __memory_data().")
-
+        # récupération et nettoyage du nouveau df
         df_new = self.df.copy()
         df_new = df_new.drop_duplicates(subset=["text_preprocessed"], keep="last")
-
+        # si parquet existant
         if os.path.exists(memory_path):
+            # recupération de l'ancien df
             df_memory = pd.read_parquet(memory_path)
-            df_memory = pd.concat([df_memory, df_new], ignore_index=True)
-            df_memory = df_memory.drop_duplicates(subset=["text_preprocessed"], keep="last")
+            self.df_memory = df_memory.copy()
+            # concaténation 
+            df_memory_all = pd.concat([df_memory, df_new], ignore_index=True)
+            df_memory_all = df_memory_all.drop_duplicates(subset=["text_preprocessed"], keep="last")
+            self.retrain_pipe = True
         else:
-            df_memory = df_new
-
-        df_memory.to_parquet(memory_path, index=False)
-        self.df = df_memory.copy()
+            # si il n'existe pas reccupation simple du nouveau df
+            df_memory_all = df_new
+            self.df_memory = df_new
+            self.retrain_pipe = False
+            
+        # enregistrement du nouveau df
+        df_memory_all.to_parquet(memory_path, index=False)
+        
 
 
 
@@ -178,33 +186,46 @@ class Preprocessing:
             
 
 
-    def train_test_split(self,  test_size=0.2, random_state=42):
+    def train_test_split(self, test_size=0.2, random_state=42):
         """Cette méthode divise le DataFrame en ensembles d'entraînement et de test.
         Elle utilise la fonction train_test_split de scikit-learn pour effectuer cette division
         en fonction de la taille du test et de l'état aléatoire spécifiés, puis retourne les ensembles d'entraînement et de test.
         """
 
-        
-        feature_cols = [col for col in self.df.columns if col not in self.exclude_cols]
+        self.df_memory["sample_weight"] = 1.0
+
+        feature_cols = [col for col in self.df_memory.columns if col not in self.exclude_cols]
+
         print(feature_cols)
-        self.X_text = self.df["text_preprocessed"]
-        self.X_num = self.df[feature_cols]
-        self.y = self.df['label']
+
+        self.X_text = self.df_memory["text_preprocessed"]
+        self.X_num = self.df_memory[feature_cols]
+        self.y = self.df_memory["label"]
+        self.sample_weight = self.df_memory["sample_weight"]
 
         if self.prediction_pipe:
             self.X_text_train = self.X_text
             self.X_num_train = self.X_num
             self.y_train = self.y
-        
+
         if not self.prediction_pipe:
-            self.X_text_train, self.X_text_test, self.X_num_train, self.X_num_test, self.y_train, self.y_test = train_test_split(
+
+            self.X_text_train, self.X_text_test, self.X_num_train, self.X_num_test, self.y_train, self.y_test, self.sample_weight_train, self.sample_weight_test = train_test_split(
                 self.X_text,
                 self.X_num,
                 self.y,
+                self.sample_weight,
                 test_size=test_size,
                 random_state=random_state,
                 stratify=self.y
             )
+
+            if self.retrain_pipe:
+                self.df["sample_weight"] = 3.0
+                self.X_text_train = pd.concat([self.X_text_train, self.df["text_preprocessed"]], ignore_index=True)
+                self.X_num_train = pd.concat([self.X_num_train, self.df[feature_cols]],ignore_index=True)
+                self.y_train = pd.concat([self.y_train, self.df["label"]], ignore_index=True)
+                self.sample_weight_train = pd.concat([self.sample_weight_train, self.df["sample_weight"]], ignore_index=True)
 
     def tfidf_vectorization(self, artifact_path):
         """Cette méthode applique la vectorisation TF-IDF aux textes d'entraînement et de test.

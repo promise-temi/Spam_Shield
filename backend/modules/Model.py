@@ -52,7 +52,7 @@ class Model:
             features = NLP_Feat_Eng(df, corpus_path).feature_engineering_full_pipeline()
             preprocessing = Preprocessing(features, artifact_path)
             preprocessing.delete_memory_data()
-            X_train, X_test, y_train, y_test = preprocessing.preprocessing_pipeline()
+            X_train, X_test, y_train, y_test, _, __ = preprocessing.preprocessing_pipeline()
             self.X_train = X_train
             metrics = self.build_virgin_model_pipeline(X_train, X_test, y_train, y_test)
             logging.info("Fin du pipeline - Enregistrement du model dans ML Flow")
@@ -65,19 +65,19 @@ class Model:
             raise ValueError("Le DataFrame doit contenir au moins 10 lignes pour ré-entraîner un modèle.")
         with mlflow.start_run(run_name="retrain_model"):
             features = NLP_Feat_Eng(df, corpus_path).feature_engineering_full_pipeline()
-            X_train, X_test, y_train, y_test = Preprocessing(features, artifact_path).preprocessing_pipeline()
+            X_train, X_test, y_train, y_test, s_weight_train, _ = Preprocessing(features, artifact_path).preprocessing_pipeline()
             self.X_train = X_train
-            metrics = self.__retrain_model_pipeline(X_train, X_test, y_train, y_test)
+            metrics = self.__retrain_model_pipeline(X_train, X_test, y_train, y_test, s_weight_train)
             logging.info("Fin du pipeline - Enregistrement du model dans ML Flow")  
             ML_Flow_Operations().save_metrics(metrics)
 
-    def __retrain_model_pipeline(self, X_train, X_test, y_train, y_test):
+    def __retrain_model_pipeline(self, X_train, X_test, y_train, y_test, s_weight_train):
         """Cette méthode exécute l'ensemble du pipeline de rechargement d'un modèle existant.
         Elle charge un modèle existant, le réentraîne sur les nouvelles données d'entraînement,
         le teste sur les données de test, évalue les performances du modèle et sauvegarde le modèle mis à jour.
         """
         model = ML_Flow_Operations().get_latest_model()
-        model.fit(X_train, y_train)
+        model.fit(X_train, y_train, sample_weight=s_weight_train)
         y_pred = model.predict(X_test)
         evaluation_results = self.evaluate_model(y_test, y_pred)
         self.save_model_mlflow(model)
