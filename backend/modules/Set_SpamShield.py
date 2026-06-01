@@ -1,5 +1,4 @@
 import pandas as pd
-import kagglehub
 import os
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -38,16 +37,12 @@ class SET_Spam_Shield_Dependances:
     def Multiligual_Spam_Dataset(self):
         # telechargement initial du dataset
         output_dir = f"{self.raw_data_dir}/multiligual_spam_dataset"
-        self.__create_dir_if_not_exist(output_dir)
-        try:
-            kagglehub.dataset_download("rajnathpatel/multilingual-spam-data", output_dir=output_dir)
-        except Exception as e:
-            print(f"Kaggle dataset not available : {e}")
-            return
-
         # reccupération du dataset d'interet
-        df = pd.read_csv(f"{output_dir}/data-en-hi-de-fr.csv")
-
+        try:
+            df = pd.read_csv(f"{output_dir}/data-en-hi-de-fr.csv")
+        except Exception as e:
+            logging.error(f"Dataset not available : {e}")
+            return
         # Identification des livrables d'interets
         interesting_cols = ['labels','text', 'text_fr']
         df_filtered = df[interesting_cols]
@@ -75,19 +70,17 @@ class SET_Spam_Shield_Dependances:
     
     def Phishing_Email_Dataset(self):
         output_dir = f"{self.raw_data_dir}/phishing_email_dataset"
-        self.__create_dir_if_not_exist(output_dir)
-        try:
-            kagglehub.dataset_download("naserabdullahalam/phishing-email-dataset", output_dir=output_dir)
-        except Exception as e:
-            logging.error(f"Kaggle dataset not available : {e}")
-            return
 
         # pour chaques fichiers
         for file_name in os.listdir(output_dir):
             if file_name == '.complete' :
                 continue
             try:
-                df = pd.read_csv(f'{output_dir}/{file_name}')
+                try:
+                    df = pd.read_csv(f'{output_dir}/{file_name}')
+                except Exception as e:
+                    logging.error(f"Dataset not available : {e}")
+                    return
                 interesting_cols = ['label','body']
 
                 #identification des colonnes d'interet
@@ -111,7 +104,7 @@ class SET_Spam_Shield_Dependances:
         try:
             df = pd.read_json(output_dir)
         except Exception as e:
-            logging.error(f"Kaggle dataset not available : {e}")
+            logging.error(f"Dataset not available : {e}")
             return
 
         # les collones sont deja standardisé c'est un dataset custum, réalisé par mes soins
@@ -123,14 +116,11 @@ class SET_Spam_Shield_Dependances:
     def SMS_spam_detection_multilingual(self):
         output_dir = f"{self.raw_data_dir}/sms_spam_detection_multilingual"
         self.__create_dir_if_not_exist(output_dir)
-        try:
-            kagglehub.dataset_download("debapampal2002/sms-dataset1", output_dir=output_dir)
+        try: 
+            df = pd.read_csv(f'{output_dir}/dataset.csv')
         except Exception as e:
-            logging.error(f"Kaggle dataset not available : {e}")
+            logging.error(f"Dataset not available : {e}")
             return
-
-        df = pd.read_csv(f'{output_dir}/dataset.csv')
-
         # idetification des colonnes d'interet
         interesting_cols = ['labels', 'text']
 
