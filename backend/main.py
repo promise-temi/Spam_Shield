@@ -42,12 +42,13 @@ df = pd.DataFrame([
 model_.AI_full_retrain_model_pipeline(df, "backend/modules/data/corpus.parquet", "backend/modules/data")
 
 
-# # prediction pipeline
-# df = pd.DataFrame([
-#         {'label': None, 'text': "bim bam booum !"},
-#          ])
+# prediction pipeline
+df = pd.DataFrame([
+        {'text': "Voulez vous gagner un Iphone gratuit ? Inscriver vous : https://iphone_gratos.com"},
+        {'text': "Je vien de voir que vous aviez un autre site https://les_comptoirs_de_matilde.com. C'est ici que je peux commander?"}
+         ])
     
-# model_ = Model(prediction_pipe=True)
-# prediction = model_.AI_full_prediction_pipeline(df=df)
-# print(df["text"].iloc[0])
-# print(prediction)
+model_ = Model(prediction_pipe=True)
+prediction = model_.AI_full_prediction_pipeline(df=df, corpus_path="backend/modules/data/corpus.parquet", artifact_path="backend/modules/data")
+print(df["text"].iloc[0])
+print(prediction)

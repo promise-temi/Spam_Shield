@@ -54,7 +54,10 @@ class Preprocessing:
         self.relace_inf_with_zero()
         self.drop_duplicates_()
         self.memory_data()
-        self.train_test_split()
+        if self.prediction_pipe:
+            self.split_for_prediction()
+        else:
+            self.train_test_split()
         self.tfidf_vectorization(self.artifact_path)
         self.robust_scale_numeric_features(self.artifact_path)
         self.hsstack_features()
@@ -153,6 +156,11 @@ class Preprocessing:
             logging.info("Aucun fichier mémoire à supprimer.")
 
     def memory_data(self):
+        
+        if self.prediction_pipe:
+            self.df_memory = self.df.copy()
+            return
+        
         memory_path = f"{self.artifact_path}/memory_df.parquet"
         os.makedirs(self.artifact_path, exist_ok=True)
 
@@ -183,6 +191,17 @@ class Preprocessing:
 
 
 
+    def split_for_prediction(self):
+        feature_cols = [col for col in self.df.columns if col not in self.exclude_cols]
+
+        print(feature_cols)
+
+        self.X_text = self.df["text_preprocessed"]
+        self.X_num = self.df[feature_cols]
+
+        if self.prediction_pipe:
+            self.X_text_train = self.X_text
+            self.X_num_train = self.X_num
             
 
 
@@ -191,41 +210,30 @@ class Preprocessing:
         Elle utilise la fonction train_test_split de scikit-learn pour effectuer cette division
         en fonction de la taille du test et de l'état aléatoire spécifiés, puis retourne les ensembles d'entraînement et de test.
         """
-
         self.df_memory["sample_weight"] = 1.0
-
         feature_cols = [col for col in self.df_memory.columns if col not in self.exclude_cols]
-
-        print(feature_cols)
 
         self.X_text = self.df_memory["text_preprocessed"]
         self.X_num = self.df_memory[feature_cols]
         self.y = self.df_memory["label"]
         self.sample_weight = self.df_memory["sample_weight"]
 
-        if self.prediction_pipe:
-            self.X_text_train = self.X_text
-            self.X_num_train = self.X_num
-            self.y_train = self.y
+        self.X_text_train, self.X_text_test, self.X_num_train, self.X_num_test, self.y_train, self.y_test, self.sample_weight_train, self.sample_weight_test = train_test_split(
+            self.X_text,
+            self.X_num,
+            self.y,
+            self.sample_weight,
+            test_size=test_size,
+            random_state=random_state,
+            stratify=self.y
+        )
 
-        if not self.prediction_pipe:
-
-            self.X_text_train, self.X_text_test, self.X_num_train, self.X_num_test, self.y_train, self.y_test, self.sample_weight_train, self.sample_weight_test = train_test_split(
-                self.X_text,
-                self.X_num,
-                self.y,
-                self.sample_weight,
-                test_size=test_size,
-                random_state=random_state,
-                stratify=self.y
-            )
-
-            if self.retrain_pipe:
-                self.df["sample_weight"] = 3.0
-                self.X_text_train = pd.concat([self.X_text_train, self.df["text_preprocessed"]], ignore_index=True)
-                self.X_num_train = pd.concat([self.X_num_train, self.df[feature_cols]],ignore_index=True)
-                self.y_train = pd.concat([self.y_train, self.df["label"]], ignore_index=True)
-                self.sample_weight_train = pd.concat([self.sample_weight_train, self.df["sample_weight"]], ignore_index=True)
+        if self.retrain_pipe:
+            self.df["sample_weight"] = 3.0
+            self.X_text_train = pd.concat([self.X_text_train, self.df["text_preprocessed"]], ignore_index=True)
+            self.X_num_train = pd.concat([self.X_num_train, self.df[feature_cols]],ignore_index=True)
+            self.y_train = pd.concat([self.y_train, self.df["label"]], ignore_index=True)
+            self.sample_weight_train = pd.concat([self.sample_weight_train, self.df["sample_weight"]], ignore_index=True)
 
     def tfidf_vectorization(self, artifact_path):
         """Cette méthode applique la vectorisation TF-IDF aux textes d'entraînement et de test.
@@ -242,9 +250,8 @@ class Preprocessing:
             ML_Flow_Operations().save_model_artefact(f"{artifact_path}/tfidf.pkl")
 
         if self.prediction_pipe:
-            logging.info("Réccupération du précédent artefact TF-IDF depuis ML Flow")
-            artefact = ML_Flow_Operations().get_latest_artefact(f"{artifact_path}/tfidf.pkl")
-            vectorizer = joblib.load(artefact)
+            logging.info("Réccupération du précédent artefact TF-IDF en local")
+            vectorizer = joblib.load(f"{artifact_path}/tfidf.pkl")
             self.X_text_train_tfidf = vectorizer.transform(self.X_text_train)
 
 
@@ -266,10 +273,10 @@ class Preprocessing:
             logging.info("Enregistrement du nouvel artefact Robust Scaler dans ML Flow")
             joblib.dump(scaler, f"{artifact_path}/robust_scaler.pkl")
             ML_Flow_Operations().save_model_artefact(f"{artifact_path}/robust_scaler.pkl")
+
         if self.prediction_pipe:
-            logging.info("Réccupération du précédent artefact Robust Scaler depuis ML Flow")
-            artefact = ML_Flow_Operations().get_latest_artefact(f"{artifact_path}/robust_scaler.pkl")
-            scaler = joblib.load(artefact)
+            logging.info("Réccupération du précédent artefact Robust Scaler en local")
+            scaler = joblib.load(f"{artifact_path}/robust_scaler.pkl")
             self.X_num_train_scaled = scaler.transform(self.X_num_train)
             
 
@@ -281,5 +288,6 @@ class Preprocessing:
         if not self.prediction_pipe:
             self.X_train_combined = hstack([self.X_text_train_tfidf, self.X_num_train_scaled]) 
             self.X_test_combined = hstack([self.X_text_test_tfidf, self.X_num_test_scaled])
+
         if self.prediction_pipe:
             self.X_train_combined = hstack([self.X_text_train_tfidf, self.X_num_train_scaled])

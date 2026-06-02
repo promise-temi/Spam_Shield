@@ -4,7 +4,11 @@ import numpy as np
 import pandas as pd
 import os
 import logging
+import time
+import sys
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
+from Helpers_Monitoring import Helpers_Monitoring
 
 
 urgency_words = [
@@ -259,6 +263,7 @@ class NLP_Feat_Eng:
         stocke le résultat dans une nouvelle colonne 'msg_length' du DataFrame.
         """
         self.df['msg_length'] = self.df['text'].str.len()
+        
 
 
     def word_count(self):

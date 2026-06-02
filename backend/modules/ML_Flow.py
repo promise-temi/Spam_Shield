@@ -2,6 +2,9 @@ import mlflow
 import mlflow.sklearn
 from mlflow.tracking import MlflowClient 
 import logging
+from mlflow.tracking import MlflowClient
+import joblib
+
 mlflow.set_tracking_uri(
     "http://127.0.0.1:5000"
 )
@@ -30,12 +33,17 @@ class ML_Flow_Operations:
     def get_latest_model(self):
         return mlflow.sklearn.load_model("models:/SpamShieldClassifier/latest")
     
-    def get_latest_artefact(self, pkl_path):
-        runs = mlflow.search_runs(order_by=["start_time DESC"], max_results=1)
-        run_id = runs.iloc[0]["run_id"]
-        return mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path=pkl_path)
+    def get_latest_artefact(self, pkl_name):
+        runs = mlflow.search_runs(experiment_names=["SpamShield"], order_by=["start_time DESC"], max_results=1)
 
-    from mlflow.tracking import MlflowClient
+        if runs.empty:
+            raise Exception("Aucun run MLflow trouvé.")
+        run_id = runs.iloc[0]["run_id"] 
+
+        return mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path=f"artifacts/{pkl_name}")
+    
+
+   
 
     def delete_all_models(self, model_name="SpamShieldClassifier"):
         client = MlflowClient()
