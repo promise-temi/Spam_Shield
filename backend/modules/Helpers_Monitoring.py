@@ -14,7 +14,7 @@ class Helpers_Monitoring:
             start = time.time()
             result = Methode_(*args, **kwargs)   # <-- tu EXÉCUTES la fonction
             end = time.time()
-            total_time = (end - start) * 1000    # en ms
-            logging.info(f"{Methode_.__name__} took {total_time:.2f} ms")
+            total_time = (end - start) / 60 # en minutes
+            logging.info(f"{Methode_.__name__} : {total_time:.4f} minutes")
             return result                        # <-- tu renvoies le résultat
         return wrapper

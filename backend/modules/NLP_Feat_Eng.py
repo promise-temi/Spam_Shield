@@ -9,6 +9,7 @@ import sys
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from Helpers_Monitoring import Helpers_Monitoring
+monitor = Helpers_Monitoring()
 
 
 urgency_words = [
@@ -97,12 +98,12 @@ class NLP_Feat_Eng:
         self.politeness_words = politeness_words
         self.signature_words = signature_words
 
-        self.regex_decl = r'.*\w+.*.'
-        self.regex_interrog = r".*\w+.*\?"
-        self.regex_elliptical = r".*\w+.*\.{2,}"
-        self.regex_exclam = r".*\w+.*!{2,}"
-        self.regex_emphatic_question = r".*\w+.*\?{2,}"
-        self.regex_comma = r".*\w+.*,"
+        self.regex_decl = r'.*\.'
+        self.regex_interrog = r".*\?"
+        self.regex_elliptical = r".*\.{2,}"
+        self.regex_exclam = r".*!{2,}"
+        self.regex_emphatic_question = r"\?{2,}"
+        self.regex_comma = r".*,"
         self.regex_upper_count = r"[A-ZÀÂÄÇÉÈÊËÎÏÔÖÙÛÜŸ]"
         self.regex_lower_count = r"[a-zàâäçéèêëîïôöùûüÿ]"
         self.regex_digit = r"\d"
@@ -186,57 +187,57 @@ class NLP_Feat_Eng:
 
         self.corpus_path = self.corpus_path
 
-
+    @monitor.calculate_func_time
     def feature_engineering_full_pipeline(self, update_corpus=True):
         logging.info("Début du pipeline de feature engineering NLP")
 
         self.df["text"] = self.df["text"].fillna("").astype(str)
 
         self.message_length()
-        # self.word_count()
-        # self.count_declarative_sentences()
-        # self.count_interrogative_sentences()
-        # self.count_elliptical_sentences()
-        # self.count_emphatic_exclamations()
-        # self.count_emphatic_questions()
-        # self.count_commas()
-        # self.average_word_length()
-        # self.median_word_length()
-        # self.uppercase_count()
-        # self.lowercase_count()
-        # self.uppercase_ratio()
-        # self.digit_count()
-        # self.word_digit_count()
-        # self.money_count()
-        # self.money_words_count()
-        # self.phone_number_count()
-        # self.email_count()
-        # self.company_email_count()
-        # self.contact_email_count()
-        # self.support_email_count()
-        # self.noreply_email_count()
-        # self.suspect_email_count()
-        # self.special_character_count()
-        # self.line_break_count()
-        # self.tab_count()
-        # self.emoji_count()
-        # self.whitespace_count()
-        # self.special_character_ratio()
+        self.word_count()
+        self.count_declarative_caracters()
+        self.count_interrogative_caracters()
+        self.count_elliptical_caracters()
+        self.count_emphatic_exclamations()
+        self.count_emphatic_questions()
+        self.count_commas()
+        self.average_word_length()
+        self.median_word_length()
+        self.uppercase_count()
+        self.lowercase_count()
+        self.uppercase_ratio()
+        self.digit_count()
+        self.word_digit_count()
+        self.money_count()
+        self.money_words_count()
+        self.phone_number_count()
+        self.email_count()
+        self.company_email_count()
+        self.contact_email_count()
+        self.support_email_count()
+        self.noreply_email_count()
+        self.suspect_email_count()
+        self.special_character_count()
+        self.line_break_count()
+        self.tab_count()
+        self.emoji_count()
+        self.whitespace_count()
+        self.special_character_ratio()
 
         self.lower_the_text()
 
-        # self.count_psycho_ugency_words()
-        # self.count_financial_words()
-        # self.count_threat_words()
-        # self.count_authority_words()
-        # self.count_reward_words()
-        # self.count_urls()
-        # self.count_suspicious_urls()
-        # self.count_shortened_urls()
-        # self.count_personal_pronouns()
-        # self.count_greetings()
-        # self.count_politeness()
-        # self.count_signatures()
+        self.count_psycho_ugency_words()
+        self.count_financial_words()
+        self.count_threat_words()
+        self.count_authority_words()
+        self.count_reward_words()
+        self.count_urls()
+        self.count_suspicious_urls()
+        self.count_shortened_urls()
+        self.count_personal_pronouns()
+        self.count_greetings()
+        self.count_politeness()
+        self.count_signatures()
 
         self.df["text_transformed"] = self.df["text_lower"]
 
@@ -257,7 +258,7 @@ class NLP_Feat_Eng:
 
         return self.df
 
-
+    @monitor.calculate_func_time
     def message_length(self):
         """Cette méthode calcule la longueur de chaque message et 
         stocke le résultat dans une nouvelle colonne 'msg_length' du DataFrame.
@@ -265,20 +266,20 @@ class NLP_Feat_Eng:
         self.df['msg_length'] = self.df['text'].str.len()
         
 
-
+    @monitor.calculate_func_time
     def word_count(self):
         self.df["msg_word_count"] = self.df["text"].str.split().str.len()
 
-
-    def count_declarative_sentences(self):
+    @monitor.calculate_func_time
+    def count_declarative_caracters(self):
         """Cette méthode compte le nombre de phrases déclaratives dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
         colonne 'msg_declarative_sentence_count' du DataFrame.
         """
         self.df['msg_declarative_sentence_count'] = self.df['text'].str.count(self.regex_decl)
 
-
-    def count_interrogative_sentences(self):
+    @monitor.calculate_func_time
+    def count_interrogative_caracters(self):
         """Cette méthode compte le nombre de phrases interrogatives dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
         colonne 'msg_interrogative_sentence_count' du DataFrame.
@@ -286,14 +287,15 @@ class NLP_Feat_Eng:
         self.df['msg_interrogative_sentence_count'] = self.df['text'].str.count(self.regex_interrog)
 
 
-    def count_elliptical_sentences(self):
+    @monitor.calculate_func_time
+    def count_elliptical_caracters(self):
         """Cette méthode compte le nombre de phrases eliptiques dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
         colonne 'msg_elliptical_sentence_count' du DataFrame.
         """
         self.df['msg_elliptical_sentence_count'] = self.df['text'].str.count(self.regex_elliptical)
 
-
+    @monitor.calculate_func_time
     def count_emphatic_exclamations(self):
         """Cette méthode compte le nombre de phrases d'exclamation emphatiques dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -301,7 +303,7 @@ class NLP_Feat_Eng:
         """
         self.df['msg_emphatic_exclamation_sentence_count'] = self.df['text'].str.count(self.regex_exclam)
 
-
+    @monitor.calculate_func_time
     def count_emphatic_questions(self):
         """Cette méthode compte le nombre de phrases d'intérogation emphatiques dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -309,7 +311,7 @@ class NLP_Feat_Eng:
         """
         self.df['msg_emphatic_question_sentence_count'] = self.df['text'].str.count(self.regex_emphatic_question)
 
-
+    @monitor.calculate_func_time
     def count_commas(self):
         """Cette méthode compte le nombre de virgules dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -317,21 +319,21 @@ class NLP_Feat_Eng:
         """
         self.df['coma_count'] = self.df['text'].str.count(self.regex_comma  )
 
-
+    @monitor.calculate_func_time
     def average_word_length(self):
         words = self.df["text"].str.findall(r"\b\w+\b")
         self.df["average_word_length"] = words.apply(
             lambda x: sum(map(len, x)) / len(x) if x else 0
         )
 
-
+    @monitor.calculate_func_time
     def median_word_length(self):
         words = self.df["text"].str.findall(r"\b\w+\b")
         self.df["median_word_length"] = words.apply(
             lambda x: float(np.median([len(w) for w in x])) if x else 0
         )
 
-
+    @monitor.calculate_func_time
     def uppercase_count(self):
         """Cette méthode compte le nombre de lettres majuscules dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -339,7 +341,7 @@ class NLP_Feat_Eng:
         """
         self.df['uppercase_count'] = self.df['text'].str.count(self.regex_upper_count)
 
-
+    @monitor.calculate_func_time
     def lowercase_count(self):
         """Cette méthode compte le nombre de lettres minuscules dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -348,6 +350,7 @@ class NLP_Feat_Eng:
         self.df['lowercase_count'] = self.df['text'].str.count(self.regex_lower_count)
 
 
+    @monitor.calculate_func_time
     def uppercase_ratio(self):
         total_letters = self.df["uppercase_count"] + self.df["lowercase_count"]
         self.df["uppercase_ratio"] = np.where(
@@ -356,6 +359,8 @@ class NLP_Feat_Eng:
             0
         )
 
+
+    @monitor.calculate_func_time
     def digit_count(self):
         """Cette méthode compte le nombre de chiffres dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -364,7 +369,7 @@ class NLP_Feat_Eng:
         self.df['digit_count'] = self.df['text'].str.count(self.regex_digit)
         
 
-
+    @monitor.calculate_func_time
     def word_digit_count(self):       
         """Cette méthode compte le nombre de mots représentant des chiffres dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -373,6 +378,7 @@ class NLP_Feat_Eng:
         self.df['word_digit_count'] = self.df['text'].str.count(self.regex_word_digit)
 
 
+    @monitor.calculate_func_time
     def money_count(self):
         """Cette méthode compte le nombre de mentions d'argent dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -381,6 +387,7 @@ class NLP_Feat_Eng:
         self.df["money_count"] = self.df["text"].str.count(self.regex_money_digits)
 
 
+    @monitor.calculate_func_time
     def money_words_count(self):
         """Cette méthode compte le nombre de mentions d'argent écrites en toutes lettres dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -389,6 +396,7 @@ class NLP_Feat_Eng:
         self.df["money_words_count"] = self.df["text"].str.count(self.regex_money_words)
 
 
+    @monitor.calculate_func_time
     def phone_number_count(self):
         """Cette méthode compte le nombre de numéros de téléphone dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -396,7 +404,7 @@ class NLP_Feat_Eng:
         """
         self.df["phone_number_count"] = self.df["text"].str.count(self.regex_phone)
 
-
+    @monitor.calculate_func_time
     def email_count(self):        
         """Cette méthode compte le nombre d'adresses e-mail dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -404,6 +412,7 @@ class NLP_Feat_Eng:
         """
         self.df["email_count"] = self.df["text"].str.count(self.regex_email)
 
+    @monitor.calculate_func_time
     def company_email_count(self):        
         """Cette méthode compte le nombre d'adresses e-mail d'entreprise dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -412,6 +421,7 @@ class NLP_Feat_Eng:
         self.df["company_email_count"] = self.df["text"].str.count(self.regex_company_email)
 
 
+    @monitor.calculate_func_time
     def contact_email_count(self):
         """Cette méthode compte le nombre d'adresses e-mail de contact dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -420,6 +430,7 @@ class NLP_Feat_Eng:
         self.df["contact_email_count"] = self.df["text"].str.count(self.regex_contact)
 
 
+    @monitor.calculate_func_time
     def support_email_count(self):
         """Cette méthode compte le nombre d'adresses e-mail de support dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -428,6 +439,7 @@ class NLP_Feat_Eng:
         self.df["support_email_count"] = self.df["text"].str.count(self.regex_support)
 
 
+    @monitor.calculate_func_time
     def noreply_email_count(self):
         """Cette méthode compte le nombre d'adresses e-mail de type 'no-reply' dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -436,6 +448,7 @@ class NLP_Feat_Eng:
         self.df["noreply_email_count"] = self.df["text"].str.count(self.regex_noreply)
 
 
+    @monitor.calculate_func_time
     def suspect_email_count(self):
         """Cette méthode compte le nombre d'adresses e-mail suspectes dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -444,6 +457,7 @@ class NLP_Feat_Eng:
         self.df["suspect_email_count"] = self.df["text"].str.count(self.regex_suspect_email)
         
 
+    @monitor.calculate_func_time
     def special_character_count(self):
         """Cette méthode compte le nombre de caractères spéciaux dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -452,6 +466,7 @@ class NLP_Feat_Eng:
         self.df["special_character_count"] = self.df["text"].str.count(r"[^a-zA-Z0-9\s]")
 
 
+    @monitor.calculate_func_time
     def line_break_count(self):
         """Cette méthode compte le nombre de sauts de ligne dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -460,6 +475,7 @@ class NLP_Feat_Eng:
         self.df["line_break_count"] = self.df["text"].str.count(r"\n")
 
 
+    @monitor.calculate_func_time
     def tab_count(self):
         """Cette méthode compte le nombre de tabulations dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -468,6 +484,7 @@ class NLP_Feat_Eng:
         self.df["tab_count"] = self.df["text"].str.count(r"\t")
 
 
+    @monitor.calculate_func_time
     def emoji_count(self):
         """Cette méthode compte le nombre d'emojis dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -476,6 +493,7 @@ class NLP_Feat_Eng:
         self.df["emoji_count"] = self.df["text"].str.count(self.emoji_pattern)
 
 
+    @monitor.calculate_func_time
     def whitespace_count(self):
         """Cette méthode compte le nombre de caractères d'espacement dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -484,6 +502,7 @@ class NLP_Feat_Eng:
         self.df["whitespace_count"] = self.df["text"].str.count(r"\s")
 
 
+    @monitor.calculate_func_time
     def special_character_ratio(self):
         self.df["special_character_ratio"] = np.where(
             self.df["msg_length"] > 0,
@@ -491,6 +510,7 @@ class NLP_Feat_Eng:
             0
         )
 
+    @monitor.calculate_func_time
     def lower_the_text(self):
         """Cette méthode convertit le texte de chaque message en minuscules 
         et stocke le résultat dans une nouvelle colonne 'text_lower' du DataFrame.
@@ -498,6 +518,7 @@ class NLP_Feat_Eng:
         self.df["text_lower"] = self.df["text"].str.lower()
 
 
+    @monitor.calculate_func_time
     def count_psycho_ugency_words(self):
         """Cette méthode compte le nombre de mots d'urgence psychologique dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -506,6 +527,7 @@ class NLP_Feat_Eng:
         self.df["urgency_word_count"] = self.df["text_lower"].str.count(self.regex_urgency)
 
 
+    @monitor.calculate_func_time
     def count_financial_words(self):
         """Cette méthode compte le nombre de mots financiers dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -514,6 +536,7 @@ class NLP_Feat_Eng:
         self.df["financial_word_count"] = self.df["text_lower"].str.count(self.regex_financial)
 
 
+    @monitor.calculate_func_time
     def count_threat_words(self):
         """Cette méthode compte le nombre de mots de menace dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -522,6 +545,7 @@ class NLP_Feat_Eng:
         self.df["threat_word_count"] = self.df["text_lower"].str.count(self.regex_threat)
 
 
+    @monitor.calculate_func_time
     def count_authority_words(self):
         """Cette méthode compte le nombre de mots d'autorité dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -530,6 +554,7 @@ class NLP_Feat_Eng:
         self.df["authority_word_count"] = self.df["text_lower"].str.count(self.regex_authority)
 
 
+    @monitor.calculate_func_time
     def count_reward_words(self):
         """Cette méthode compte le nombre de mots de récompense dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -538,6 +563,7 @@ class NLP_Feat_Eng:
         self.df["reward_word_count"] = self.df["text_lower"].str.count(self.regex_reward)
 
 
+    @monitor.calculate_func_time
     def count_urls(self):
         """Cette méthode compte le nombre d'URLs dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -546,6 +572,7 @@ class NLP_Feat_Eng:
         self.df["url_count"] = self.df["text_lower"].str.count(self.regex_url)
 
 
+    @monitor.calculate_func_time
     def count_suspicious_urls(self):
         """Cette méthode compte le nombre d'URLs suspectes dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -553,6 +580,8 @@ class NLP_Feat_Eng:
         """
         self.df["suspicious_url_count"] = self.df["text_lower"].str.count(self.regex_suspicious_url)
 
+
+    @monitor.calculate_func_time
     def count_shortened_urls(self):
         """Cette méthode compte le nombre d'URLs raccourcies dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
@@ -561,6 +590,7 @@ class NLP_Feat_Eng:
         self.df["shortened_url_count"] = self.df["text_lower"].str.count(self.regex_shortened)
 
 
+    @monitor.calculate_func_time
     def count_personal_pronouns(self):
         """Cette méthode compte le nombre de pronoms personnels dans chaque message 
         en utilisant des expressions régulières pour chaque groupe de pronoms et stocke 
@@ -575,6 +605,7 @@ class NLP_Feat_Eng:
         self.df["on_count"] = self.df["text_lower"].str.count(self.regex_on)
         
 
+    @monitor.calculate_func_time
     def count_greetings(self):
         """Cette méthode compte le nombre de mots de salutation dans chaque message
         en utilisant une expression régulière et stocke le résultat dans une nouvelle
@@ -582,6 +613,8 @@ class NLP_Feat_Eng:
         """
         self.df["has_greeting"] = self.df["text_lower"].str.contains(self.regex_greeting, regex=True).astype(int)
 
+
+    @monitor.calculate_func_time
     def count_politeness(self):
         """Cette méthode compte le nombre de mots de politesse dans chaque message
         en utilisant une expression régulière et stocke le résultat dans une nouvelle
@@ -589,6 +622,7 @@ class NLP_Feat_Eng:
         """
         self.df["has_politeness"] = self.df["text_lower"].str.contains(self.regex_politeness, regex=True).astype(int)
 
+    @monitor.calculate_func_time
     def count_signatures(self):
         """Cette méthode compte le nombre de mots de signature dans chaque message
         en utilisant une expression régulière et stocke le résultat dans une nouvelle
@@ -597,6 +631,7 @@ class NLP_Feat_Eng:
         self.df["has_signature"] = self.df["text_lower"].str.contains(self.regex_signature, regex=True).astype(int)
 
 
+    @monitor.calculate_func_time
     def replace_money_info(self):
         self.df["text_transformed"] = (
             self.df["text_transformed"]
@@ -604,6 +639,8 @@ class NLP_Feat_Eng:
             .str.replace(self.regex_money_words, "[MONEY]", regex=True)
         )
 
+
+    @monitor.calculate_func_time
     def replace_phone_info(self):
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(
             self.regex_phone,
@@ -611,6 +648,8 @@ class NLP_Feat_Eng:
             regex=True
         )
 
+
+    @monitor.calculate_func_time
     def replace_email_info(self):
         """Cette méthode remplace les adresses e-mail dans le texte de chaque message
         par des tokens génériques en utilisant des expressions régulières pour différents types d'e-mails.
@@ -621,6 +660,8 @@ class NLP_Feat_Eng:
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_suspect_email, "[SUSPECT_EMAIL]", regex=True)
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_email, "[EMAIL]", regex=True)
 
+
+    @monitor.calculate_func_time
     def replace_psycho_urgency_words(self):
         """Cette méthode remplace les mots d'urgence psychologique dans le texte de chaque message
         par un token générique '[URGENCY]' en utilisant une expression régulière.
@@ -631,6 +672,8 @@ class NLP_Feat_Eng:
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_authority, "[AUTHORITY]", regex=True)
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_reward, "[REWARD]", regex=True)
 
+
+    @monitor.calculate_func_time
     def replace_urls(self):
         """Cette méthode remplace les URLs dans le texte de chaque message
         par des tokens génériques en utilisant des expressions régulières pour différents types d'URLs.
@@ -639,6 +682,8 @@ class NLP_Feat_Eng:
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_shortened, "[SHORTENED_URL]", regex=True)
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_url, "[URL]", regex=True)
 
+
+    @monitor.calculate_func_time
     def replace_greetings_politeness_signatures(self):
         """Cette méthode remplace les mots de salutation, de politesse et de 
         signature dans le texte de chaque message
@@ -650,7 +695,7 @@ class NLP_Feat_Eng:
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_signature, "[SIGNATURE]", regex=True)
 
 
-
+    @monitor.calculate_func_time
     def replace_digits(self):
         """Cette méthode remplace les chiffres et les mots représentant des 
         chiffres dans le texte de chaque message
@@ -660,7 +705,7 @@ class NLP_Feat_Eng:
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_word_digit, "[W_DIGIT]", regex=True) 
 
 
-    
+    @monitor.calculate_func_time   
     def remove_special_chars(self, text):
         """Cette méthode supprime les caractères spéciaux du texte de chaque message
         en utilisant des expressions régulières pour remplacer les caractères indésirables par des espaces.
@@ -675,7 +720,9 @@ class NLP_Feat_Eng:
         text = re.sub(r"\s+", " ", text).strip()
 
         return text
-    
+
+
+    @monitor.calculate_func_time 
     def clean_special_characters(self):
         self.df["text_final"] = (
             self.df["text_transformed"]
@@ -685,6 +732,8 @@ class NLP_Feat_Eng:
             .str.strip()
         )
     
+
+    @monitor.calculate_func_time
     def update_corpus(self, corpus_path):
         os.makedirs(os.path.dirname(corpus_path), exist_ok=True)
 

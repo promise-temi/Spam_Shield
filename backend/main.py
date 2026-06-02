@@ -15,10 +15,6 @@ model_ = Model()
 model_.AI_full_virgin_model_training_pipeline(df_messages, "backend/modules/data/corpus.parquet", "backend/modules/data")
 
 
-
-
-
-
 # retrain model pipeline
 model_ = Model()
 df = pd.DataFrame([
@@ -44,8 +40,8 @@ model_.AI_full_retrain_model_pipeline(df, "backend/modules/data/corpus.parquet",
 
 # prediction pipeline
 df = pd.DataFrame([
-        {'text': "Voulez vous gagner un Iphone gratuit ? Inscriver vous : https://iphone_gratos.com"},
-        {'text': "Je vien de voir que vous aviez un autre site https://les_comptoirs_de_matilde.com. C'est ici que je peux commander?"}
+        {'text': "Boujour, Voulez vous gagner un Iphone gratuit ? "},
+        {'text': "Bonjour, Je m'interesse beaucoup a votre service gratuit, pouvez voous me recontacter par mail à promise.john@gmail.com"}
          ])
     
 model_ = Model(prediction_pipe=True)
