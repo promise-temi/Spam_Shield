@@ -1,19 +1,63 @@
+import sys
+import os
+import pandas as pd
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
+from Model import Model
+from Business_Rules import Business_Rules
+
 class SpamShield_Operations():
-    def __init__():
+    def __init__(self):
         pass
 
-    def New_Message_Pipeline():
-        # Faire une prédiction avec le modèle
-        # filtrer avec règles métiers
+    def New_Message(self, message:dict):
+        # Prédiction avec le modèle
+        model = Model(prediction_pipe=True)
+        prediction_model = model.AI_full_prediction_pipeline()
+
+        # Règles métier : regexes, charabia =  forced spam
+        regexes = ["\.net", "Salut","blabla"]
+        business_rules = Business_Rules(regexes)
+        prediction_business_rules = business_rules.business_rules_pipeline(message['text'])
+        print(prediction_model)
+        print(prediction_business_rules)
+
         # si ham envoyer par mail au destinataires
+
         # si spam ne rien envoyer
         # stoquer information crypté et version passé au pipeline de préprocessing
         pass
-
     
-
-    def Update_label_pipeline(self, id:int):
-        # prendre en entrée
+    def Show_Messages(self):
+        #reccuperer tout les messages
+        # decrypter informations
+        # preparer liste de dictionnaires de messages
         pass
+
+    def Update_label(self, id:int):
+        # prendre en entrée l'id 
+        # mettre a jour le label (passer la var modified a l'opposé)
+        pass
+
+    def Retrain_All_Messages(self):
+        #reccupère les messages préprocésé sous forme de liste de dictionnaire
+        # réentraine le model
+        pass
+
+    def Delete_All_Messages(self):
+        #supprime tout les messages de la base de données 
+        pass
+
+    def Send_Report(self):
+        # Envoi le rapport
+        pass
+
+    def Add_Regex_Rule(self):
+        # A jout dans la base les nouvelles regex
+        pass
+
+    def Delete_Regex_rule(self):
+        # Suppression dans la base regex
+        pass
+
 
     

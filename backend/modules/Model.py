@@ -5,9 +5,7 @@ import mlflow
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
-from xml.parsers.expat import model
 from sklearn.svm import LinearSVC
-from Gibberish_detector import GibberishDetector
 from NLP_Feat_Eng import NLP_Feat_Eng
 from Preprocessing import Preprocessing
 from ML_Flow import ML_Flow_Operations

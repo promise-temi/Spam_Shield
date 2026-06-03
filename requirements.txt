@@ -15,5 +15,9 @@ plotly
 pytest
 
 scikit-learn
+hmmlearn
 joblib
+
 mlflow
+
+psycopg2

@@ -9,11 +9,15 @@ mlflow.set_tracking_uri(
     "http://127.0.0.1:5000"
 )
 
-mlflow.set_experiment("SpamShield")
 
 class ML_Flow_Operations:
-    def __init__(self):
-        pass
+    def __init__(self, experiment_name="SpamShield"):
+        self.experiment_name = experiment_name
+        self.set_mlflow_experience()
+
+    def set_mlflow_experience(self):
+        mlflow.set_experiment(self.experiment_name)
+
 
     def save_metrics(self, metrics):
         # Cette methode logs les metriques d'un modèle dans mlflow
@@ -23,8 +27,8 @@ class ML_Flow_Operations:
         mlflow.log_metric("f1_score", metrics["f1_score"])
         mlflow.log_metric("training_nb", metrics["training_nb"])
 
-    def save_model(self, model):
-        mlflow.sklearn.log_model(model, artifact_path="model", registered_model_name="SpamShieldClassifier")
+    def save_model(self, model, model_name="SpamShieldClassifier"):
+        mlflow.sklearn.log_model(model, artifact_path="model", registered_model_name=model_name)
 
     def save_model_artefact(self, pkl_path):
         mlflow.log_artifact(pkl_path, artifact_path="artifacts")

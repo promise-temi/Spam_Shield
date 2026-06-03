@@ -1,33 +1,46 @@
 from collections import defaultdict, Counter
 import re
 
-class MarkovModel:
+class MarkovGibberishDetector:
     def __init__(self):
         self.transitions = defaultdict(Counter)
         self.total_counts = Counter()
+        self.trained = False
 
-    def train(self, texts):
-        for text in texts:
-            text = re.sub(r"[^a-zA-Zàâäéèêëîïôöùûüÿç]", "", text.lower())
-            for a, b in zip(text, text[1:]):
-                self.transitions[a][b] += 1
-                self.total_counts[a] += 1
+    def clean_text(self, text):
+        text = text.lower()
+        text = re.sub(r"[^a-zA-Zàâäéèêëîïôöùûüÿç ]", "", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
 
-    def transition_prob(self, a, b):
+    # -----------------------------
+    # ENTRAÎNEMENT
+    # -----------------------------
+    def train_model(self, tokens):
+        text = " ".join(tokens)
+        text = self.clean_text(text)
+
+        for a, b in zip(text, text[1:]):
+            self.transitions[a][b] += 1
+            self.total_counts[a] += 1
+
+        self.trained = True
+
+    # -----------------------------
+    # SCORE
+    # -----------------------------
+    def transition_probability(self, a, b):
         if self.total_counts[a] == 0:
             return 0
         return self.transitions[a][b] / self.total_counts[a]
 
-    def score_text(self, text):
-        text = re.sub(r"[^a-zA-Zàâäéèêëîïôöùûüÿç]", "", text.lower())
+    def markov_score(self, text):
+        text = self.clean_text(text)
         if len(text) < 2:
             return 0
 
-        probs = []
-        for a, b in zip(text, text[1:]):
-            probs.append(self.transition_prob(a, b))
+        probs = [self.transition_probability(a, b) for a, b in zip(text, text[1:])]
+        return sum(probs) / len(probs) if probs else 0
 
-        if not probs:
-            return 0
-
-        return sum(probs) / len(probs)
+    def is_gibberish(self, text, threshold=0.07):
+        return self.markov_score(text) < threshold
