@@ -228,3 +228,5 @@ __marimo__/
 *.db
 *.pkl
 *.joblib
+/mlartifacts/
+*.db
