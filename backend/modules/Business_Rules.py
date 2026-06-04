@@ -19,16 +19,18 @@ class Business_Rules:
         self.filter_message_lenght(text)
         self.gibberish(text)
         self.banned_patterns(text)
-        is_spam = self.delibaration(text)
+        is_spam = self.delibaration()
         return is_spam
         
 
 
     def gibberish(self, text:str):
-        self.detector.train_model(pd.read_parquet(f"{os.path.dirname(__file__)}/data/corpus.parquet"))
+        df = pd.read_parquet(f"{os.path.dirname(__file__)}/data/corpus.parquet")
+        self.detector.train_model(df["token"].tolist())
         is_giberish = self.detector.is_gibberish(text)
+        print(f"giberish score = {self.detector.score_}")
         if is_giberish:
-            self.banned_patterns_found.append(f"Contient charabia/gibberish  : {len(text)}.")
+            self.banned_patterns_found.append(f"Contient charabia/gibberish : {self.detector.score_}.")
 
     def filter_message_lenght(self, text:str):
         if len(text) < self.min_size_message:

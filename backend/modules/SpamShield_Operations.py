@@ -5,6 +5,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from Model import Model
 from Business_Rules import Business_Rules
 
+
+
 class SpamShield_Operations():
     def __init__(self):
         pass
@@ -12,18 +14,15 @@ class SpamShield_Operations():
     def New_Message(self, message:dict):
         # Prédiction avec le modèle
         model = Model(prediction_pipe=True)
-        prediction_model = model.AI_full_prediction_pipeline()
+        prediction_model = model.AI_full_prediction_pipeline(message)
 
         # Règles métier : regexes, charabia =  forced spam
-        regexes = ["\.net", "Salut","blabla"]
+        regexes = [r"\.net", r"Salut",r"blabla"]
         business_rules = Business_Rules(regexes)
-        prediction_business_rules = business_rules.business_rules_pipeline(message['text'])
-        print(prediction_model)
-        print(prediction_business_rules)
+        prediction_business_rules = business_rules.business_rules_pipeline(model.features['text_final'].iloc[0])
 
-        # si ham envoyer par mail au destinataires
+        # si ham envoyer par mail au destinataires, si spam ne rien envoyer(non urgent - nice to hace)
 
-        # si spam ne rien envoyer
         # stoquer information crypté et version passé au pipeline de préprocessing
         pass
     

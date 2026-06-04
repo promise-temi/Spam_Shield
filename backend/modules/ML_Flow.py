@@ -2,22 +2,17 @@ import mlflow
 import mlflow.sklearn
 from mlflow.tracking import MlflowClient 
 import logging
-from mlflow.tracking import MlflowClient
-import joblib
+
 
 mlflow.set_tracking_uri(
     "http://127.0.0.1:5000"
 )
 
+mlflow.set_experiment("SpamShield")
 
 class ML_Flow_Operations:
-    def __init__(self, experiment_name="SpamShield"):
-        self.experiment_name = experiment_name
-        self.set_mlflow_experience()
-
-    def set_mlflow_experience(self):
-        mlflow.set_experiment(self.experiment_name)
-
+    def __init__(self):
+        pass
 
     def save_metrics(self, metrics):
         # Cette methode logs les metriques d'un modèle dans mlflow
@@ -27,15 +22,24 @@ class ML_Flow_Operations:
         mlflow.log_metric("f1_score", metrics["f1_score"])
         mlflow.log_metric("training_nb", metrics["training_nb"])
 
-    def save_model(self, model, model_name="SpamShieldClassifier"):
-        mlflow.sklearn.log_model(model, artifact_path="model", registered_model_name=model_name)
+    def save_model(self, model, model_name):
+        logging.info('Sauvegarde du model dans ML Flow')
+        mlflow.sklearn.log_model(model, artifact_path="model", registered_model_name=f"SpamShieldClassifier-({model_name})")
 
     def save_model_artefact(self, pkl_path):
         mlflow.log_artifact(pkl_path, artifact_path="artifacts")
 
     
+    # def get_latest_model(self):
+    #     return mlflow.sklearn.load_model("models:/SpamShieldClassifier/latest")
+    
     def get_latest_model(self):
-        return mlflow.sklearn.load_model("models:/SpamShieldClassifier/latest")
+        client = MlflowClient()
+        models = client.search_registered_models()
+        models = sorted(models, key=lambda m: m.last_updated_timestamp, reverse=True)
+        latest_model_name = models[0].name
+        logging.info("Dernier modèle enregistré :", latest_model_name)
+        return mlflow.sklearn.load_model(f"models:/{latest_model_name}/latest")
     
     def get_latest_artefact(self, pkl_name):
         runs = mlflow.search_runs(experiment_names=["SpamShield"], order_by=["start_time DESC"], max_results=1)
