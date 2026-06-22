@@ -43,5 +43,5 @@ class MarkovGibberishDetector:
         self.score_ = sum(probs) / len(probs) if probs else 0
         return self.score_
 
-    def is_gibberish(self, text, threshold=0.07):
+    def is_gibberish(self, text, threshold=0.06):
         return self.markov_score(text) < threshold

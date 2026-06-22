@@ -38,7 +38,7 @@ class ML_Flow_Operations:
         models = client.search_registered_models()
         models = sorted(models, key=lambda m: m.last_updated_timestamp, reverse=True)
         latest_model_name = models[0].name
-        logging.info("Dernier modèle enregistré :", latest_model_name)
+        logging.info(f"Dernier modèle enregistré : {latest_model_name}")
         return mlflow.sklearn.load_model(f"models:/{latest_model_name}/latest")
     
     def get_latest_artefact(self, pkl_name):

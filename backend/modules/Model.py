@@ -39,6 +39,7 @@ class Model:
         y_pred = self.test_model(model, X_test)
         evaluation_results = self.evaluate_model(y_test, y_pred)
         self.save_model_mlflow(model, self.model_name)
+        self.save_model_local(model, f"{self.artifact_path}/model.pkl")
         return evaluation_results
     
     def AI_full_virgin_model_training_pipeline(self):
@@ -85,6 +86,7 @@ class Model:
         y_pred = model.predict(X_test)
         evaluation_results = self.evaluate_model(y_test, y_pred)
         self.save_model_mlflow(model, f"RETRAIN - {self.model_name}")
+        self.save_model_local(model, f"{self.artifact_path}/model.pkl")
         return evaluation_results
         
     def AI_full_prediction_pipeline(self, df):
@@ -145,6 +147,7 @@ class Model:
         """Cette méthode charge un modèle à partir d'un chemin de fichier spécifié et utilise ce modèle pour faire des prédictions sur les données d'entrée.
         Elle retourne les étiquettes prédites par le modèle.
         """
-        model = ML_Flow_Operations().get_latest_model()
+        # model = ML_Flow_Operations().get_latest_model()
+        model = joblib.load( f"{self.artifact_path}/model.pkl")
         y_pred = model.predict(X)
         return y_pred
