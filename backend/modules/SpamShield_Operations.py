@@ -39,6 +39,7 @@ class SpamShield_Operations():
                                    metadata=metadata, 
                                    banned_patterns_found=banned_patterns_found, 
                                    model_pred=bool(prediction_model[0]), 
+                                   model_confidence=float(model.confidence_scores[0]),
                                    business_rules_label=bool(prediction_business_rules), 
                                    final_label=bool(final_label))
         

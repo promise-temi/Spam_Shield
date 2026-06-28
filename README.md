@@ -18,3 +18,8 @@ creer une clé d'encryption:
 from cryptography.fernet import Fernet
 key = Fernet.generate_key()
 print(key.decode())
+
+
+
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;

@@ -101,24 +101,89 @@ class Postgres_DB:
         except Exception as e:
                     logging.error(f"Une erreur s'est produite pendant la reccupération des regexes : {e}")
 
-    def save_message(self, pred_text, raw_text, metadata, banned_patterns_found, model_pred, business_rules_label, final_label):
+    def save_message(self, pred_text, raw_text, metadata, banned_patterns_found, model_pred, model_confidence, business_rules_label, final_label):
         cur = self.conn.cursor()
         cur.execute(f"""INSERT INTO messages 
                     (preprocessed_text, 
                     crypted_text, 
                     metadata, 
                     model_label, 
+                    model_confidence,
                     business_rules_label, 
                     final_label,
-                    banned_patterns_found) VALUES (%s, %s, %s, %s, %s, %s, %s);""",
+                    banned_patterns_found) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);""",
                     (pred_text,
                      self.security_tools.encrypt_(raw_text), 
                      self.security_tools.encrypt_(json.dumps(metadata)), 
                      model_pred, 
+                     model_confidence,
                      business_rules_label, 
                      final_label,
                      banned_patterns_found,))
         self.conn.commit()
         cur.close()
         logging.info("Message enregistré avec succès dans la bdd")
+
+    
+    def set_new_phase(self, start, end):
+        cur = self.conn.cursor()
+        cur.execute(f"INSERT INTO periods (start_date, end_date) VALUES (%s, %s)", (start, end,))
+        self.conn.commit()
+        cur.close()
+        logging.info(f"phase enregistré avec succès dans la bdd")
+    
+    def get_current_phase(self):
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT * FROM periods ORDER BY start_date DESC LIMIT 1")
+        row = cur.fetchone()    
+        return row
+
+    def get_total_messages(self):
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT COUNT(*) FROM messages")
+        total_messages = cur.fetchone()[0]
+        return total_messages
+    
+    def get_total_spam(self):
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT COUNT(*) FROM messages WHERE final_label = TRUE")
+        total_spam = cur.fetchone()[0]
+        return total_spam
+    
+    def get_total_ham(self):
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT COUNT(*) FROM messages WHERE final_label = FALSE")
+        total_ham = cur.fetchone()[0]
+        return total_ham
+    
+    def get_total_spam_rules(self):
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT COUNT(*) FROM messages WHERE business_rules_label = TRUE")
+        total_spam_rules = cur.fetchone()[0]
+        return total_spam_rules
+    
+    def get_mean_confidence_score(self):
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT AVG(model_confidence) FROM messages WHERE model_confidence IS NOT NULL")
+        mean_confidence_score = cur.fetchone()[0]
+        return mean_confidence_score
+    
+    def get_mean_confidence_score_spam(self):
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT AVG(model_confidence) FROM messages WHERE model_confidence IS NOT NULL AND final_label = TRUE")
+        mean_confidence_score_spam = cur.fetchone()[0]
+        return mean_confidence_score_spam
+    
+    def get_mean_confidence_score_ham(self):
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT AVG(model_confidence) FROM messages WHERE model_confidence IS NOT NULL AND final_label = FALSE")
+        mean_confidence_score_ham = cur.fetchone()[0]
+        return mean_confidence_score_ham
+    
+    def get_banned_patterns_found_count(self):
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT COUNT(*) FROM messages WHERE banned_patterns_found IS NOT NULL AND banned_patterns_found <> '[]'")
+        banned_patterns_found_count = cur.fetchone()[0]
+        return banned_patterns_found_count
+    
 

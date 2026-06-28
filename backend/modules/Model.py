@@ -150,4 +150,5 @@ class Model:
         # model = ML_Flow_Operations().get_latest_model()
         model = joblib.load( f"{self.artifact_path}/model.pkl")
         y_pred = model.predict(X)
+        self.confidence_scores = model.decision_function(X)
         return y_pred
