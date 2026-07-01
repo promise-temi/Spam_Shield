@@ -127,7 +127,7 @@ class Business_Rules:
             self.banned_patterns_found.append(f"Une URL à été détectée dans le champs Prenom")
         
         
-        if df['special_character_ratio'] > 0.15:
+        if df['special_character_ratio'] > 0.25:
             self.banned_patterns_found.append(f"Le Prenom contient un nombre inhabituel de characères spéciaux")
             
         
@@ -163,7 +163,7 @@ class Business_Rules:
             self.banned_patterns_found.append(f"Une URL à été détectée dans le champs Nom")
         
         
-        if df['special_character_ratio'] > 0.20:
+        if df['special_character_ratio'] > 0.25:
             self.banned_patterns_found.append(f"Le nom contient un nombre inhabituel de characères spéciaux")
             
         
@@ -215,9 +215,6 @@ class Business_Rules:
 
         if df['msg_length'] <= 2 or df['msg_length'] >= 180:
             self.banned_patterns_found.append(f"l'objet' semble anormalement court ou anormalement long.")
-
-        if df['special_character_ratio'] > 0.25:
-            self.banned_patterns_found.append(f"L'objet' contient un nombre inhabituel de characères spéciaux")
 
         if df['suspect_email_count'] > 0:
             self.banned_patterns_found.append(f"Une addresse email suspecte à été détectée dans le champs Objet")

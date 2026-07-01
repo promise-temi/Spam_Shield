@@ -16,7 +16,7 @@ class SpamShield_Operations():
 
     def New_Message(self, message:dict, metadata:dict):
         # Prédiction avec le modèle
-        model = Model(prediction_pipe=True)
+        model = Model(prediction_pipe=True, metadata=metadata)
         prediction_model = model.AI_full_prediction_pipeline(message)
         pred_text = model.features['text_final'].iloc[0]
         # Règles métier : regexes, charabia =  forced spam
@@ -36,46 +36,44 @@ class SpamShield_Operations():
         # stoquer information crypté et version passé au pipeline de préprocessing
         Postgres_DB().save_message(pred_text=pred_text, 
                                    raw_text=message['text'].iloc[0], 
-                                   metadata=metadata, 
-                                   banned_patterns_found=banned_patterns_found, 
-                                   model_pred=bool(prediction_model[0]), 
-                                   model_confidence=float(model.confidence_scores[0]),
-                                   business_rules_label=bool(prediction_business_rules), 
+                                   metadata=metadata,
+                                   banned_patterns_found=banned_patterns_found,
+                                   model_pred=bool(prediction_model[0]),
+                                   model_confidence=float(model.confidence_score),
+                                   business_rules_label=bool(prediction_business_rules),
                                    final_label=bool(final_label))
         
         
     
     def Show_Messages(self):
-        #reccuperer tout les messages
-        # decrypter informations
-        # preparer liste de dictionnaires de messages
-        pass
+        Postgres_DB().get_all_messages()
+        logging.info("Récupération de tous les messages terminée avec succès.")
 
     def Update_label(self, id:int):
-        # prendre en entrée l'id 
-        # mettre a jour le label (passer la var modified a l'opposé)
-        pass
+        Postgres_DB().update_message_label(id)
+        logging.info(f"Le label du message avec l'ID '{id}' a été mis à jour avec succès.")
 
     def Retrain_All_Messages(self):
         #reccupère les messages préprocésé sous forme de liste de dictionnaire
-        # réentraine le model
+        messages = pd.DataFrame(Postgres_DB().get_all_anonymized_messages())
+        model = Model()
+        model.AI_full_retrain_model_pipeline(df=messages)
+        logging.info("Réentraînement du modèle terminé avec succès.")
         pass
 
     def Delete_All_Messages(self):
-        #supprime tout les messages de la base de données 
-        pass
+        Postgres_DB().delete_all_messages()
+        logging.info("Tous les messages ont été supprimés avec succès de la base de données.")
 
-    def Send_Report(self):
-        # Envoi le rapport
-        pass
 
-    def Add_Regex_Rule(self):
-        # A jout dans la base les nouvelles regex
-        pass
+    def Add_Regex_Rule(self, pattern:str):
+        Postgres_DB().add_regex_rule(pattern)
+        logging.info(f"La règle regex '{pattern}' a été ajoutée avec succès.")
 
-    def Delete_Regex_rule(self):
-        # Suppression dans la base regex
-        pass
+    def Delete_Regex_rule(self, id:int):
+        Postgres_DB().delete_regex_rule(id)
+        logging.info(f"La règle regex avec l'ID '{id}' a été supprimée avec succès.")
+        
 
 
     

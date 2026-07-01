@@ -23,3 +23,18 @@ print(key.decode())
 
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;
+
+
+pour voir les logs pytests
+pytest -o log_cli=true --log-cli-level=DEBUG tests
+
+
+https://eduscol.education.gouv.fr/sites/default/files/document/guide-la-grammaire-du-francais-terminologie-grammaticale-67998.pdf
+
+
+
+
+
+si nom et prenom renseignée dans les metadonnée, le cacher dans le texte avec [SENSITIVE]
+
+

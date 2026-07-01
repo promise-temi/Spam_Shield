@@ -182,8 +182,60 @@ class Postgres_DB:
     
     def get_banned_patterns_found_count(self):
         cur = self.conn.cursor()
-        cur.execute(f"SELECT COUNT(*) FROM messages WHERE banned_patterns_found IS NOT NULL AND banned_patterns_found <> '[]'")
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM messages
+            WHERE banned_patterns_found IS NOT NULL
+            AND cardinality(banned_patterns_found) > 0
+        """)
         banned_patterns_found_count = cur.fetchone()[0]
+        cur.close()
         return banned_patterns_found_count
     
+    def get_all_anonymized_messages(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT preprocessed_text, model_label from messages")
+        rows = cur.fetchall()
+        messages = []
+        for row in rows:
+            message = {
+                "text": row[0],
+                "label": row[1]
+            }
+            messages.append(message)
+        return messages
 
+    def delete_all_messages(self):
+        cur = self.conn.cursor()
+        cur.execute("DELETE FROM messages")
+        self.conn.commit()
+        cur.close()
+        logging.info("Tous les messages ont été supprimés de la base de données")
+
+
+    def add_regex_rule(self, pattern:str):
+        cur = self.conn.cursor()
+        cur.execute("INSERT INTO regexes (pattern) VALUES (%s);", (pattern,))
+        self.conn.commit()
+        cur.close()
+        logging.info(f"La règle regex '{pattern}' a été ajoutée à la base de données.")
+
+    def delete_regex_rule(self, id:int):
+        cur = self.conn.cursor()
+        cur.execute("DELETE FROM regexes WHERE id = (%s);", (id,))
+        self.conn.commit()
+        cur.close()
+        logging.info(f"La règle regex avec l'ID '{id}' a été supprimée de la base de données.")
+
+    def update_message_label(self, id:int):
+        cur = self.conn.cursor()
+        # modifier if edited a l'opposé de ce qu'il est actuellement
+        cur.execute("Update messages SET is_edited = NOT is_edited WHERE id = (%s);", (id,))
+        cur.execute("UPDATE messages SET edition_counter = edition_counter + 1 WHERE id = (%s);", (id,))
+        cur.execute("UPDATE messages SET final_label = NOT final_label WHERE id = (%s);", (id,))
+        self.conn.commit()
+        cur.close()
+        logging.info(f"Le label du message avec l'ID '{id}' a été mis à jour avec succès.")
+
+    def get_all_messages(self):
+        cur = self.conn.cur

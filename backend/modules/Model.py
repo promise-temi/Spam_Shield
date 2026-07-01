@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import mlflow
+import numpy as np
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
@@ -23,12 +24,13 @@ import joblib
 
 
 class Model:
-    def __init__(self, prediction_pipe=False, model=LinearSVC(max_iter=10000), model_name="LinearSVC"):
+    def __init__(self, prediction_pipe=False, model=LinearSVC(max_iter=15000, random_state=42), model_name="LinearSVC", metadata={}):
         self.prediction_pipe = prediction_pipe
         self.corpus_path = f"{os.path.dirname(__file__)}/data/corpus.parquet"
         self.artifact_path = f"{os.path.dirname(__file__)}/data"
         self.model = model
         self.model_name = model_name
+        self.metadata = metadata
 
     def build_virgin_model_pipeline(self, X_train, X_test, y_train, y_test):
         """Cette méthode exécute l'ensemble du pipeline de construction d'un modèle vierge.
@@ -90,7 +92,7 @@ class Model:
         return evaluation_results
         
     def AI_full_prediction_pipeline(self, df):
-        self.features = NLP_Feat_Eng(df, self.corpus_path).feature_engineering_full_pipeline()
+        self.features = NLP_Feat_Eng(df, self.corpus_path, self.metadata).feature_engineering_full_pipeline()
         X = Preprocessing(self.features, self.artifact_path, self.prediction_pipe).preprocessing_pipeline()
         y_pred = self.predict(X)
         return y_pred
@@ -150,5 +152,10 @@ class Model:
         # model = ML_Flow_Operations().get_latest_model()
         model = joblib.load( f"{self.artifact_path}/model.pkl")
         y_pred = model.predict(X)
-        self.confidence_scores = model.decision_function(X)
+        self.get_confidence(model, X)
         return y_pred
+    
+    def get_confidence(self, model, X):
+        scores = model.decision_function(X)
+        confidence = 1 / (1 + np.exp(-np.abs(scores)))
+        self.confidence_score = confidence[0]

@@ -80,8 +80,12 @@ class Mail_Operations:
                             \nSpam : {self.get_total_spam() if self.get_total_spam() else '__'}
                             \nHam : {self.get_total_ham() if self.get_total_ham() else '__'}
                             \nSpam Règles Metier : {self.get_total_spam_rules() if self.get_total_spam_rules() else '__'}
+                            \nScore de confiance moyen : {self.get_mean_confidence_score() if self.get_mean_confidence_score() else '__'}
+                            \nScore de confiance moyen Spam : {self.get_mean_confidence_score_spam() if self.get_mean_confidence_score_spam() else '__'}
+                            \nScore de confiance moyen Ham : {self.get_mean_confidence_score_ham() if self.get_mean_confidence_score_ham() else '__'}
+                            \nRecapitulatif des patterns interdits détectés : {self.get_banned_patterns_found_count() if self.get_banned_patterns_found_count() else '__'}  
                             \n\n\n\n\nA la reception de ce rapport, vous avez jusqu'au {deadline} pour apporter des corrections avant que les messages et données associées ne soient définitivement supprimées.
-                            \n Aidez Spamshield à mieux comprendre vos besoins. Consulter votre tableau de bord SpamShield pour ajuster vos préférences et affiner les prochaines analyses""")
+                            \nAidez Spamshield à mieux comprendre vos besoins. Consulter votre tableau de bord SpamShield pour ajuster vos préférences et affiner les prochaines analyses""")
 
             with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
                 smtp.login(self.email_address, self.email_password)

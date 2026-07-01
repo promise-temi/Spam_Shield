@@ -13,27 +13,27 @@ monitor = Helpers_Monitoring()
 
 
 urgency_words = [
-    "urgent", "immédiat", "immédiate", "immédiatement",
-    "important", "critique", "alerte", "attention",
-    "action requise", "réagissez", "réponse immédiate",
-    "dernière chance", "maintenant", "tout de suite",
-    "sans délai", "au plus vite", "asap"
+    "urgen", "immédiat", "immediat",
+    "important", "critique", "alert", "attention",
+    "action requise","requi", "réagi","reagi" "réponse immédiate",
+    "reponse immediate", "dernière chance", "maintenant", "tout de suite",
+    "sans délai", "au plus vite", "asap", "rapide", "vite", "delai", "délai"
 ]
 
 financial_words = [
-    "paiement", "payer", "facture", "montant", "somme",
+    "paie", "paye", "facture", "montant", "somme",
     "remboursement", "rembourser", "transaction", "transfert",
     "virement", "compte", "bancaire", "banque", "carte",
     "crédit", "débit", "solde", "frais", "taxe", "impôt",
-    "revenu", "argent", "financier", "finance"
+    "revenu", "argent", "financier", "finance", "paie", "achè", "ache", "acha"
 ]
 
 threat_words = [
-    "bloqué", "suspendu", "suspension", "désactivé",
-    "fermé", "annulé", "risque", "danger", "sanction",
-    "poursuite", "procédure", "amende", "punition",
-    "obligatoire", "obligation", "infraction", "fraude",
-    "violation", "non conforme", "non-conformité"
+    "bloqu", "suspen", "désact","desact"
+    "ferm", "annul", "risqu", "danger", "sanctio",
+    "poursui", "procéd", "proced", "amende", "puni",
+    "obligat", "infraction", "fraude",
+    "viol", "conform"
 ]
 
 authority_words = [
@@ -84,9 +84,11 @@ signature_words = [
 
 
 class NLP_Feat_Eng:
-    def __init__(self, df, corpus_path=""):
+    def __init__(self, df, corpus_path="", metadata=""):
         self.df = df
         self.corpus_path = corpus_path
+
+        self.metadata = metadata
 
         self.urgency_words = urgency_words
         self.financial_words = financial_words
@@ -98,18 +100,19 @@ class NLP_Feat_Eng:
         self.politeness_words = politeness_words
         self.signature_words = signature_words
 
-        self.regex_decl = r'.*\.'
-        self.regex_interrog = r".*\?"
-        self.regex_elliptical = r".*\.{2,}"
-        self.regex_exclam = r".*!{2,}"
+        self.regex_decl = r"[\w ]\.(?!\.)"
+        self.regex_interrog = r"[\w ]\?(?!\?)"
+        self.regex_exclamative = r"[\w ]!(?!!)"
+        self.regex_elliptical = r"\.{2,}"
+        self.regex_exclam = r"!{2,}"
         self.regex_emphatic_question = r"\?{2,}"
-        self.regex_comma = r".*,"
+        self.regex_comma = r"[\w ],"
         self.regex_upper_count = r"[A-ZÀÂÄÇÉÈÊËÎÏÔÖÙÛÜŸ]"
         self.regex_lower_count = r"[a-zàâäçéèêëîïôöùûüÿ]"
         self.regex_digit = r"\d"
         self.regex_word_digit = r"\b(un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|onze|douze|treize|quatorze|quinze|seize|vingt|trente|quarante|cinquante|soixante|cent)\b"
-        self.regex_money_digits = r"\b\d[\d.,]*\s?(€|\$|£)\b"
-        self.regex_money_words = r"\b(un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|onze|douze|treize|quatorze|quinze|seize|vingt|trente|quarante|cinquante|soixante|cent)\s+(euros?|dollars?)\b"
+        self.regex_money_digits = r"\b\d[\d.,]*\s?(?:€|\$|£)(?!\w)"
+        self.regex_money_words = r"\b(?:un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|onze|douze|treize|quatorze|quinze|seize|vingt|trente|quarante|cinquante|soixante|cent)\s+(?:euros?|dollars?|livres?)\b"
         self.regex_phone = r"\b(\+33\s?[1-9](?:[\s.-]?\d{2}){4}|0[1-9](?:[\s.-]?\d{2}){4})\b"
         self.regex_email = r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"
         self.regex_company_email = r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+\.(fr|com|net|org|eu)\b"
@@ -128,11 +131,11 @@ class NLP_Feat_Eng:
                 "\U0001FA70-\U0001FAFF"
                 "]"
             )
-        self.regex_urgency = r"\b(" + "|".join(urgency_words) + r")\b"
-        self.regex_financial = r"\b(" + "|".join(financial_words) + r")\b"
-        self.regex_threat = r"\b(" + "|".join(threat_words) + r")\b"
-        self.regex_authority = r"\b(" + "|".join(authority_words) + r")\b"
-        self.regex_reward = r"\b(" + "|".join(reward_words) + r")\b"
+        self.regex_urgency = r"\b(" + "|".join(urgency_words) + r")\w*\b"
+        self.regex_financial = r"\b(" + "|".join(financial_words) + r")\w*\b"
+        self.regex_threat = r"\b(" + "|".join(threat_words) + r")\w*\b"
+        self.regex_authority = r"\b(" + "|".join(authority_words) + r")\w*\b"
+        self.regex_reward = r"\b(" + "|".join(reward_words) + r")\w*\b"
         self.regex_url = (
             r"(?:https?://[^\s]+|"      # http:// ou https://
             r"http//[^\s]+|"            # http// (sans :)
@@ -184,7 +187,35 @@ class NLP_Feat_Eng:
         self.regex_greeting = r"\b(" + "|".join(self.greeting_words) + r")\b"
         self.regex_politeness = r"\b(" + "|".join(self.politeness_words) + r")\b"
         self.regex_signature = r"\b(" + "|".join(self.signature_words) + r")\b"
-
+        self.negation_words = [r"ne", r"n'", r"pas", r"plus", r"jamais", r"aucun", r"aucune", r"ni", r"aucuns", r"aucunes", r"moindre", r"point", r"rien", r"nullement", r"aucunement", r"nul", r"guère"]
+        self.regex_negation = r"\b(" + "|".join(self.negation_words) + r")\b"
+        self.regex_modified_words = r"\b(?=\w*[A-Za-zÀ-ÿ])\w*[\d@€$&!%#]\w*\b"
+        self.regex_date = (
+            r"\b("
+            r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}"              # 21/06/2025
+            r"|"
+            r"\d{4}[/-]\d{1,2}[/-]\d{1,2}"                # 2025-06-21
+            r"|"
+            r"\d{1,2}\s+"
+            r"(janvier|février|mars|avril|mai|juin|"
+            r"juillet|août|septembre|octobre|novembre|décembre)"
+            r"\s+\d{4}"                                  # 21 juin 2025
+            r")\b"
+        )
+        self.regex_temporal_words = (
+            r"\b("
+            r"aujourd'hui|demain|hier|maintenant|"
+            r"immédiatement|bientôt|prochainement|"
+            r"autrefois|auparavant|désormais|"
+            r"toujours|jamais|souvent|parfois|"
+            r"ensuite|puis|avant|après|"
+            r"tôt|tard|"
+            r"ce matin|cet après-midi|ce soir|cette nuit|"
+            r"lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|"
+            r"janvier|février|mars|avril|mai|juin|"
+            r"juillet|août|septembre|octobre|novembre|décembre"
+            r")\b"
+        )
         self.corpus_path = self.corpus_path
 
     @monitor.calculate_func_time
@@ -220,12 +251,12 @@ class NLP_Feat_Eng:
         self.special_character_count()
         self.line_break_count()
         self.tab_count()
-        self.emoji_count()
-        self.whitespace_count()
-        self.special_character_ratio()
+        
 
         self.lower_the_text()
-
+        self.count_negations()
+        self.whitespace_count()
+        self.special_character_ratio()
         self.count_psycho_ugency_words()
         self.count_financial_words()
         self.count_threat_words()
@@ -235,6 +266,7 @@ class NLP_Feat_Eng:
         self.count_suspicious_urls()
         self.count_shortened_urls()
         self.count_personal_pronouns()
+        self.count_negations()
         self.count_greetings()
         self.count_politeness()
         self.count_signatures()
@@ -246,6 +278,7 @@ class NLP_Feat_Eng:
         self.replace_email_info()
         self.replace_psycho_urgency_words()
         self.replace_urls()
+        self.modified_word_count()
         self.replace_greetings_politeness_signatures()
         self.replace_digits()
         self.clean_special_characters()
@@ -288,12 +321,21 @@ class NLP_Feat_Eng:
 
 
     @monitor.calculate_func_time
+    def count_exclamative_caracters(self):
+        """Cette méthode compte le nombre de phrases exclamative dans chaque message 
+        en utilisant une expression régulière et stocke le résultat dans une nouvelle 
+        colonne 'msg_exclamative_sentence_count' du DataFrame.
+        """
+        self.df['msg_exclamative_sentence_count'] = self.df['text'].str.count(self.regex_exclamative)
+
+    @monitor.calculate_func_time
     def count_elliptical_caracters(self):
         """Cette méthode compte le nombre de phrases eliptiques dans chaque message 
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
         colonne 'msg_elliptical_sentence_count' du DataFrame.
         """
         self.df['msg_elliptical_sentence_count'] = self.df['text'].str.count(self.regex_elliptical)
+
 
     @monitor.calculate_func_time
     def count_emphatic_exclamations(self):
@@ -317,7 +359,8 @@ class NLP_Feat_Eng:
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
         colonne 'coma_count' du DataFrame.
         """
-        self.df['coma_count'] = self.df['text'].str.count(self.regex_comma  )
+        self.df['coma_count'] = self.df['text'].str.count(self.regex_comma)
+
 
     @monitor.calculate_func_time
     def average_word_length(self):
@@ -395,7 +438,6 @@ class NLP_Feat_Eng:
         """
         self.df["money_words_count"] = self.df["text"].str.count(self.regex_money_words)
 
-
     @monitor.calculate_func_time
     def phone_number_count(self):
         """Cette méthode compte le nombre de numéros de téléphone dans chaque message 
@@ -411,6 +453,7 @@ class NLP_Feat_Eng:
         colonne 'email_count' du DataFrame.
         """
         self.df["email_count"] = self.df["text"].str.count(self.regex_email)
+
 
     @monitor.calculate_func_time
     def company_email_count(self):        
@@ -463,7 +506,7 @@ class NLP_Feat_Eng:
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
         colonne 'special_character_count' du DataFrame.
         """
-        self.df["special_character_count"] = self.df["text"].str.count(r"[^a-zA-Z0-9\s]")
+        self.df["special_character_count"] = self.df["text"].str.count(r"[^0-9A-Za-zÀ-ÖØ-öø-ÿ\s]")
 
 
     @monitor.calculate_func_time
@@ -499,7 +542,7 @@ class NLP_Feat_Eng:
         en utilisant une expression régulière et stocke le résultat dans une nouvelle 
         colonne 'whitespace_count' du DataFrame.
         """
-        self.df["whitespace_count"] = self.df["text"].str.count(r"\s")
+        self.df["whitespace_count"] = self.df["text"].str.count(r" ")
 
 
     @monitor.calculate_func_time
@@ -605,6 +648,23 @@ class NLP_Feat_Eng:
         self.df["on_count"] = self.df["text_lower"].str.count(self.regex_on)
         
 
+    def count_negations(self):
+        """Cette méthode compte le nombre de négations dans chaque message 
+        en utilisant une expression régulière et stocke le résultat dans une nouvelle 
+        colonne 'negation_count' du DataFrame.
+        """
+        self.df["negation_count"] = self.df["text_lower"].str.count(self.regex_negation)
+
+    @monitor.calculate_func_time
+    def count_dates(self):
+        self.df["date_count"] = self.df["text_lower"].str.count(self.regex_date)
+    
+    @monitor.calculate_func_time
+    def count_temporal_words(self):
+        self.df["temporal_words_count"] = self.df["text"].str.count(
+            self.regex_temporal_words
+        )
+
     @monitor.calculate_func_time
     def count_greetings(self):
         """Cette méthode compte le nombre de mots de salutation dans chaque message
@@ -622,6 +682,7 @@ class NLP_Feat_Eng:
         """
         self.df["has_politeness"] = self.df["text_lower"].str.contains(self.regex_politeness, regex=True).astype(int)
 
+
     @monitor.calculate_func_time
     def count_signatures(self):
         """Cette méthode compte le nombre de mots de signature dans chaque message
@@ -629,6 +690,11 @@ class NLP_Feat_Eng:
         colonne 'has_signature' du DataFrame.
         """
         self.df["has_signature"] = self.df["text_lower"].str.contains(self.regex_signature, regex=True).astype(int)
+
+    def replace_sensitive_personal_data(self):
+        if self.metadata:
+            self.df['text_transformed'] = self.df['text_transformed'].str.replace(self.metadata['name'], ['SENSITIVE'])
+            self.df['text_transformed'] = self.df['text_transformed'].str.replace(self.metadata['surname'], ['SENSITIVE'])
 
 
     @monitor.calculate_func_time
@@ -682,6 +748,11 @@ class NLP_Feat_Eng:
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_shortened, "[SHORTENED_URL]", regex=True)
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_url, "[URL]", regex=True)
 
+    def modified_word_count(self):
+        """Cette méthode compte le nombre de mots modifiés dans chaque message cest a dire les mot qui contienne un caractere special ou un chiffre
+        """
+        self.df["modified_word_count"] = self.df['text_transformed'].str.count(self.regex_modified_words)
+
 
     @monitor.calculate_func_time
     def replace_greetings_politeness_signatures(self):
@@ -694,7 +765,20 @@ class NLP_Feat_Eng:
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_politeness, "[POLITENESS]", regex=True)
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_signature, "[SIGNATURE]", regex=True)
 
+    
 
+    @monitor.calculate_func_time
+    def replace_dates(self):
+        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_date,"[DATE]", regex=True)
+    
+    @monitor.calculate_func_time
+    def replace_temporal_words(self):
+        self.df["text_transformed"] = self.df["text_transformed"].str.replace(
+            self.regex_temporal_words,
+            "[TEMPORAL]",
+            regex=True
+        )
+    
     @monitor.calculate_func_time
     def replace_digits(self):
         """Cette méthode remplace les chiffres et les mots représentant des 
@@ -704,7 +788,7 @@ class NLP_Feat_Eng:
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_digit, "[DIGIT]", regex=True) 
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_word_digit, "[W_DIGIT]", regex=True) 
 
-
+    
     @monitor.calculate_func_time   
     def remove_special_chars(self, text):
         """Cette méthode supprime les caractères spéciaux du texte de chaque message

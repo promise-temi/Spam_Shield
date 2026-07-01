@@ -14,14 +14,14 @@ async def sleep_until_next_run():
     now = datetime.datetime.now()
 
     next_run = now.replace(
-        hour=RUN_HOUR,
-        minute=RUN_MINUTE,
+        # hour=RUN_HOUR,
+        # minute=RUN_MINUTE,
         second=0,
         microsecond=0
     )
 
     if next_run <= now:
-        next_run += datetime.timedelta(days=1)
+        next_run += datetime.timedelta(minutes=1)
 
     seconds = (next_run - now).total_seconds()
 
