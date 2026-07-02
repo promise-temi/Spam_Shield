@@ -38,3 +38,51 @@ https://eduscol.education.gouv.fr/sites/default/files/document/guide-la-grammair
 si nom et prenom renseignée dans les metadonnée, le cacher dans le texte avec [SENSITIVE]
 
 
+Message brut
+       │
+       ▼
+ ┌──────────────────────┐
+ │ Structure            │
+ │ • longueur           │
+ │ • ponctuation        │
+ │ • casse              │
+ └──────────────────────┘
+       │
+       ▼
+ ┌──────────────────────┐
+ │ Entités              │
+ │ • emails             │
+ │ • téléphones         │
+ │ • urls               │
+ │ • argent             │
+ │ • dates              │
+ └──────────────────────┘
+       │
+       ▼
+ ┌──────────────────────┐
+ │ Linguistique         │
+ │ • pronoms            │
+ │ • négations          │
+ │ • temporalité        │
+ │ • salutations        │
+ └──────────────────────┘
+       │
+       ▼
+ ┌──────────────────────┐
+ │ Psychologie          │
+ │ • urgence            │
+ │ • menace             │
+ │ • autorité           │
+ │ • récompense         │
+ └──────────────────────┘
+       │
+       ▼
+ ┌──────────────────────┐
+ │ Normalisation        │
+ │ • anonymisation      │
+ │ • nettoyage          │
+ │ • corpus             │
+ └──────────────────────┘
+       │
+       ▼
+Vecteur de caractéristiques

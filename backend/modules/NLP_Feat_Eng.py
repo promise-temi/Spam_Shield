@@ -9,6 +9,7 @@ import sys
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from Helpers_Monitoring import Helpers_Monitoring
+from Metadata_Business_Rules import Metadata_Business_Rules
 monitor = Helpers_Monitoring()
 
 
@@ -111,8 +112,15 @@ class NLP_Feat_Eng:
         self.regex_lower_count = r"[a-zàâäçéèêëîïôöùûüÿ]"
         self.regex_digit = r"\d"
         self.regex_word_digit = r"\b(un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|onze|douze|treize|quatorze|quinze|seize|vingt|trente|quarante|cinquante|soixante|cent)\b"
-        self.regex_money_digits = r"\b\d[\d.,]*\s?(?:€|\$|£)(?!\w)"
-        self.regex_money_words = r"\b(?:un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|onze|douze|treize|quatorze|quinze|seize|vingt|trente|quarante|cinquante|soixante|cent)\s+(?:euros?|dollars?|livres?)\b"
+        self.regex_money_digits = (
+            r"\b\d[\d.,]*\s?(?:€|\$|£)(?!\w)"
+            r"|"
+            r"\b\d[\d.,]*\s?(?:euros?|dollars?|livres?)\b"
+        )
+        self.regex_money_words = (
+            r"\b(?:un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|onze|douze|treize|quatorze|quinze|seize|vingt|trente|quarante|cinquante|soixante|cent)"
+            r"\s+(?:euros?|dollars?|livres?)\b"
+        )
         self.regex_phone = r"\b(\+33\s?[1-9](?:[\s.-]?\d{2}){4}|0[1-9](?:[\s.-]?\d{2}){4})\b"
         self.regex_email = r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"
         self.regex_company_email = r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+\.(fr|com|net|org|eu)\b"
@@ -137,11 +145,12 @@ class NLP_Feat_Eng:
         self.regex_authority = r"\b(" + "|".join(authority_words) + r")\w*\b"
         self.regex_reward = r"\b(" + "|".join(reward_words) + r")\w*\b"
         self.regex_url = (
-            r"(?:https?://[^\s]+|"      # http:// ou https://
-            r"http//[^\s]+|"            # http// (sans :)
-            r"http[#_/]//[^\s]+|"       # http#// ou http_//
-            r"hxxp://[^\s]+|"           # hxxp://
-            r"www\.[^\s]+)"             # www.
+            r"(?:https?://[^\s]+|"
+            r"http//[^\s]+|"
+            r"http[#_/]//[^\s]+|"
+            r"hxxp://[^\s]+|"
+            r"www\.[^\s]+|"
+            r"\b[a-zA-Z0-9_-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?\b)"
         )
         self.suspicious_tlds = [
             "xyz","top","win","bid","loan","click","info",
@@ -164,19 +173,20 @@ class NLP_Feat_Eng:
         )
 
         # Groupe 1 : je / j'
-        self.pronouns_je = [r"je\b", r"j'"]
+        self.pronouns_je = [r"\bje\b", r"\bj'"]
         # Groupe 2 : tu
-        self.pronouns_tu = [r"tu\b"]
+        self.pronouns_tu = [r"\btu\b"]
         # Groupe 3 : il / elle
-        self.pronouns_il_elle = [r"il\b", r"elle\b"]
+        self.pronouns_il_elle = [r"\bil\b", r"\belle\b"]
         # Groupe 4 : nous
-        self.pronouns_nous = [r"nous\b"]
+        self.pronouns_nous = [r"\bnous\b"]
         # Groupe 5 : vous
-        self.pronouns_vous = [r"vous\b"]
+        self.pronouns_vous = [r"\bvous\b"]
         # Groupe 6 : ils / elles
-        self.pronouns_ils_elles = [r"ils\b", r"elles\b"]
+        self.pronouns_ils_elles = [r"\bils\b", r"\belles\b"]
         # Groupe 7 : on
-        self.pronouns_on = [r"on\b"]
+        self.pronouns_on = [r"\bon\b"]
+
         self.regex_je = r"(" + "|".join(self.pronouns_je) + r")"
         self.regex_tu = r"(" + "|".join(self.pronouns_tu) + r")"
         self.regex_il_elle = r"(" + "|".join(self.pronouns_il_elle) + r")"
@@ -184,11 +194,16 @@ class NLP_Feat_Eng:
         self.regex_vous = r"(" + "|".join(self.pronouns_vous) + r")"
         self.regex_ils_elles = r"(" + "|".join(self.pronouns_ils_elles) + r")"
         self.regex_on = r"(" + "|".join(self.pronouns_on) + r")"
-        self.regex_greeting = r"\b(" + "|".join(self.greeting_words) + r")\b"
-        self.regex_politeness = r"\b(" + "|".join(self.politeness_words) + r")\b"
-        self.regex_signature = r"\b(" + "|".join(self.signature_words) + r")\b"
-        self.negation_words = [r"ne", r"n'", r"pas", r"plus", r"jamais", r"aucun", r"aucune", r"ni", r"aucuns", r"aucunes", r"moindre", r"point", r"rien", r"nullement", r"aucunement", r"nul", r"guère"]
-        self.regex_negation = r"\b(" + "|".join(self.negation_words) + r")\b"
+        self.regex_greeting = (r"\b(?:" + "|".join(re.escape(w) for w in self.greeting_words) + r")\b")
+        self.regex_politeness = (r"\b(?:" + "|".join(re.escape(w) for w in self.politeness_words) + r")\b")
+        self.regex_signature = (r"\b(?:" + "|".join(re.escape(w) for w in self.signature_words) + r")\b")
+        self.negation_words = [
+            "ne", "pas", "plus", "jamais", "aucun", "aucune",
+            "ni", "aucuns", "aucunes", "moindre", "point",
+            "rien", "nullement", "aucunement", "nul", "guère"
+        ]
+        
+        self.regex_negation = (r"\b(?:" + "|".join(self.negation_words) + r")\b|\bn'")
         self.regex_modified_words = r"\b(?=\w*[A-Za-zÀ-ÿ])\w*[\d@€$&!%#]\w*\b"
         self.regex_date = (
             r"\b("
@@ -202,19 +217,23 @@ class NLP_Feat_Eng:
             r"\s+\d{4}"                                  # 21 juin 2025
             r")\b"
         )
+        self.temporal_words = [
+            "aujourd'hui", "demain", "hier", "maintenant",
+            "immédiatement", "bientôt", "prochainement",
+            "autrefois", "auparavant", "désormais",
+            "toujours", "jamais", "souvent", "parfois",
+            "ensuite", "puis", "avant", "après",
+            "tôt", "tard",
+            "ce matin", "cet après-midi", "ce soir", "cette nuit",
+            "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche",
+            "janvier", "février", "mars", "avril", "mai", "juin",
+            "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+        ]
+
         self.regex_temporal_words = (
-            r"\b("
-            r"aujourd'hui|demain|hier|maintenant|"
-            r"immédiatement|bientôt|prochainement|"
-            r"autrefois|auparavant|désormais|"
-            r"toujours|jamais|souvent|parfois|"
-            r"ensuite|puis|avant|après|"
-            r"tôt|tard|"
-            r"ce matin|cet après-midi|ce soir|cette nuit|"
-            r"lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|"
-            r"janvier|février|mars|avril|mai|juin|"
-            r"juillet|août|septembre|octobre|novembre|décembre"
-            r")\b"
+            r"\b(?:"
+            + "|".join(self.temporal_words)
+            + r")\b"
         )
         self.corpus_path = self.corpus_path
 
@@ -254,7 +273,6 @@ class NLP_Feat_Eng:
         
 
         self.lower_the_text()
-        self.count_negations()
         self.whitespace_count()
         self.special_character_ratio()
         self.count_psycho_ugency_words()
@@ -661,7 +679,7 @@ class NLP_Feat_Eng:
     
     @monitor.calculate_func_time
     def count_temporal_words(self):
-        self.df["temporal_words_count"] = self.df["text"].str.count(
+        self.df["temporal_words_count"] = self.df["text_lower"].str.count(
             self.regex_temporal_words
         )
 
@@ -690,24 +708,42 @@ class NLP_Feat_Eng:
         colonne 'has_signature' du DataFrame.
         """
         self.df["has_signature"] = self.df["text_lower"].str.contains(self.regex_signature, regex=True).astype(int)
-
+    
     def replace_sensitive_personal_data(self):
         if self.metadata:
-            self.df['text_transformed'] = self.df['text_transformed'].str.replace(self.metadata['name'], ['SENSITIVE'])
-            self.df['text_transformed'] = self.df['text_transformed'].str.replace(self.metadata['surname'], ['SENSITIVE'])
+            self.df['text_transformed'] = self.df['text_lower']
+            mbr = Metadata_Business_Rules()
+            try:
+                if mbr.check_name(self.metadata['name'], self.feat_eng_metadata(self.metadata['name'])):
+                    self.df['text_transformed'] = self.df['text_transformed'].str.replace(self.metadata['name'].lower(), '[SENSITIVE]')
+            except KeyError:
+                pass
 
+            try:
+                if mbr.check_surname(self.metadata['surname'], self.feat_eng_metadata(self.metadata['surname'])):
+                    self.df['text_transformed'] = self.df['text_transformed'].str.replace(self.metadata['surname'].lower(), '[SENSITIVE]')
+            except KeyError:
+                pass
 
     @monitor.calculate_func_time
     def replace_money_info(self):
+        if "text_transformed" not in self.df.columns:
+            self.df['text_transformed'] = self.df['text_lower']
+    
         self.df["text_transformed"] = (
             self.df["text_transformed"]
             .str.replace(self.regex_money_digits, "[MONEY]", regex=True)
             .str.replace(self.regex_money_words, "[MONEY]", regex=True)
         )
+        
+
 
 
     @monitor.calculate_func_time
     def replace_phone_info(self):
+        if "text_transformed" not in self.df.columns:
+            self.df['text_transformed'] = self.df['text_lower']
+    
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(
             self.regex_phone,
             "[PHONE]",
@@ -720,10 +756,13 @@ class NLP_Feat_Eng:
         """Cette méthode remplace les adresses e-mail dans le texte de chaque message
         par des tokens génériques en utilisant des expressions régulières pour différents types d'e-mails.
         """
-        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_company_email, "[CORP_EMAIL]", regex=True)
-        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_contact, "[CONTACT_EMAIL]", regex=True)
-        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_noreply, "[NO_REPLY_EMAIL]", regex=True)
-        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_suspect_email, "[SUSPECT_EMAIL]", regex=True)
+        if "text_transformed" not in self.df.columns:
+            self.df['text_transformed'] = self.df['text_lower']
+    
+        # self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_company_email, "[CORP_EMAIL]", regex=True)
+        # self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_contact, "[CONTACT_EMAIL]", regex=True)
+        # self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_noreply, "[NO_REPLY_EMAIL]", regex=True)
+        # self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_suspect_email, "[SUSPECT_EMAIL]", regex=True)
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_email, "[EMAIL]", regex=True)
 
 
@@ -732,6 +771,9 @@ class NLP_Feat_Eng:
         """Cette méthode remplace les mots d'urgence psychologique dans le texte de chaque message
         par un token générique '[URGENCY]' en utilisant une expression régulière.
         """
+        if "text_transformed" not in self.df.columns:
+            self.df['text_transformed'] = self.df['text_lower']
+    
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_urgency, "[URGENCY]", regex=True)
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_financial, "[FINANCIAL]", regex=True)
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_threat, "[THREAT]", regex=True)
@@ -744,13 +786,19 @@ class NLP_Feat_Eng:
         """Cette méthode remplace les URLs dans le texte de chaque message
         par des tokens génériques en utilisant des expressions régulières pour différents types d'URLs.
         """
-        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_suspicious_url, "[SUSPICIOUS_URL]", regex=True)
-        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_shortened, "[SHORTENED_URL]", regex=True)
+        if "text_transformed" not in self.df.columns:
+            self.df['text_transformed'] = self.df['text_lower']
+    
+        # self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_suspicious_url, "[SUSPICIOUS_URL]", regex=True)
+        # self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_shortened, "[SHORTENED_URL]", regex=True)
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_url, "[URL]", regex=True)
 
     def modified_word_count(self):
         """Cette méthode compte le nombre de mots modifiés dans chaque message cest a dire les mot qui contienne un caractere special ou un chiffre
         """
+        if "text_transformed" not in self.df.columns:
+            self.df['text_transformed'] = self.df['text_lower']
+    
         self.df["modified_word_count"] = self.df['text_transformed'].str.count(self.regex_modified_words)
 
 
@@ -761,6 +809,9 @@ class NLP_Feat_Eng:
         par des tokens génériques en utilisant des expressions 
         régulières pour chaque catégorie de mots.
         """
+        if "text_transformed" not in self.df.columns:
+            self.df['text_transformed'] = self.df['text_lower']
+    
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_greeting, "[GREETING]", regex=True)
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_politeness, "[POLITENESS]", regex=True)
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_signature, "[SIGNATURE]", regex=True)
@@ -769,10 +820,16 @@ class NLP_Feat_Eng:
 
     @monitor.calculate_func_time
     def replace_dates(self):
+        if "text_transformed" not in self.df.columns:
+            self.df['text_transformed'] = self.df['text_lower']
+    
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_date,"[DATE]", regex=True)
     
     @monitor.calculate_func_time
     def replace_temporal_words(self):
+        if "text_transformed" not in self.df.columns:
+            self.df['text_transformed'] = self.df['text_lower']
+    
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(
             self.regex_temporal_words,
             "[TEMPORAL]",
@@ -785,8 +842,11 @@ class NLP_Feat_Eng:
         chiffres dans le texte de chaque message
         par des tokens génériques en utilisant des expressions régulières.
         """
+        if "text_transformed" not in self.df.columns:
+            self.df['text_transformed'] = self.df['text_lower']
+    
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_digit, "[DIGIT]", regex=True) 
-        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_word_digit, "[W_DIGIT]", regex=True) 
+        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_word_digit, "[DIGIT]", regex=True) 
 
     
     @monitor.calculate_func_time   
@@ -808,6 +868,9 @@ class NLP_Feat_Eng:
 
     @monitor.calculate_func_time 
     def clean_special_characters(self):
+        if "text_transformed" not in self.df.columns:
+            self.df['text_transformed'] = self.df['text_lower']
+    
         self.df["text_final"] = (
             self.df["text_transformed"]
             .str.replace(r"[-']", " ", regex=True)
@@ -841,3 +904,23 @@ class NLP_Feat_Eng:
 
         df_corpus.to_parquet(corpus_path, index=False)
         
+
+    def feat_eng_metadata(self, text):
+        df = pd.DataFrame([{"text":text}])
+        tools_ = NLP_Feat_Eng(df)
+        tools_.message_length()
+        tools_.special_character_count()
+        tools_.special_character_ratio()
+        tools_.digit_count()
+        tools_.phone_number_count()
+        tools_.email_count()
+        tools_.company_email_count()
+        tools_.support_email_count()
+        tools_.suspect_email_count()
+        tools_.email_count()
+        tools_.support_email_count()
+        tools_.lower_the_text()
+        tools_.count_urls()
+        tools_.count_shortened_urls()
+        tools_.count_suspicious_urls()
+        return tools_.df
