@@ -26,17 +26,17 @@ Postgres_DB().add_prospect_mail(['temi.promisejohn@gmail.com'])
 
 # SpamShield_Operations().New_Message(df, metadata)
 
-models = [
-    # RidgeClassifierModel(),
-    # SGDClassifierModel(),
-    # RandomForestModel(),
-    # CatBoostModel(),
-    # LightGBMModel(),
-    # FastTextModel(),
-    # TransformerModel(),
-    LogisticRegression(),
-    LinearSVC(),
-]
+# models = [
+#     RidgeClassifierModel(),
+#     SGDClassifierModel(),
+#     RandomForestModel(),
+#     CatBoostModel(),
+#     LightGBMModel(),
+#     FastTextModel(),
+#     TransformerModel(),
+#     LogisticRegression(),
+#     LinearSVC(),
+# ]
 
     
 

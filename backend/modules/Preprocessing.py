@@ -12,15 +12,18 @@ from sklearn.metrics import classification_report
 from scipy.sparse import hstack
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import RobustScaler, MinMaxScaler
+from sklearn.decomposition import PCA
 from scipy.sparse import hstack
 import joblib
 import sys
 import os
 import logging
+from sklearn.decomposition import TruncatedSVD
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from ML_Flow import ML_Flow_Operations
+
 
 class Preprocessing:
     def __init__(self, df, artifact_path="", prediction_pipe=False):
@@ -60,7 +63,9 @@ class Preprocessing:
             self.train_test_split()
         self.tfidf_vectorization(self.artifact_path)
         self.robust_scale_numeric_features(self.artifact_path)
-        self.hsstack_features()
+        self.dimension_reduction_truncated_SVD(self.artifact_path)
+        self.dimension_reduction_pca(self.artifact_path)
+        self.np_hsstack_features()
         logging.info("Fin du pipeline de preprocessing NLP")
         if self.prediction_pipe:
             return self.X_train_combined
@@ -235,6 +240,9 @@ class Preprocessing:
             self.y_train = pd.concat([self.y_train, self.df["label"]], ignore_index=True)
             self.sample_weight_train = pd.concat([self.sample_weight_train, self.df["sample_weight"]], ignore_index=True)
 
+
+    
+
     def tfidf_vectorization(self, artifact_path):
         """Cette méthode applique la vectorisation TF-IDF aux textes d'entraînement et de test.
         Elle utilise la classe TfidfVectorizer de scikit-learn pour transformer les textes en matrices de caractéristiques
@@ -256,7 +264,25 @@ class Preprocessing:
 
 
             
-        
+    def dimension_reduction_truncated_SVD(self, artifact_path):
+        if not self.prediction_pipe:
+            svd = TruncatedSVD(
+                n_components=300,
+                random_state=42
+            )
+
+            self.X_text_train_svd = svd.fit_transform(self.X_text_train_tfidf)
+            self.X_text_test_svd = svd.transform(self.X_text_test_tfidf)
+
+            logging.info("Enregistrement du nouvel artefact SVD dans ML Flow")
+            joblib.dump(svd, f"{artifact_path}/svd.pkl")
+            ML_Flow_Operations().save_model_artefact(f"{artifact_path}/svd.pkl")
+
+        if self.prediction_pipe:
+            logging.info("Récupération du précédent artefact SVD en local")
+            svd = joblib.load(f"{artifact_path}/svd.pkl")
+
+            self.X_text_train_svd = svd.transform(self.X_text_train_tfidf)
             
 
     
@@ -278,6 +304,36 @@ class Preprocessing:
             logging.info("Réccupération du précédent artefact Robust Scaler en local")
             scaler = joblib.load(f"{artifact_path}/robust_scaler.pkl")
             self.X_num_train_scaled = scaler.transform(self.X_num_train)
+
+    def dimension_reduction_pca(self, artifact_path, explained_variance=0.99):
+        """
+        Réduit les dimensions des features numériques en conservant un pourcentage
+        donné de la variance expliquée.
+        """
+
+        if not self.prediction_pipe:
+            pca = PCA(
+                n_components=explained_variance,
+                random_state=42
+            )
+
+            self.X_num_train_pca = pca.fit_transform(self.X_num_train_scaled)
+            self.X_num_test_pca = pca.transform(self.X_num_test_scaled)
+
+            logging.info(
+                f"PCA : {pca.n_components_} composantes conservées "
+                f"({pca.explained_variance_ratio_.sum():.2%} de variance)"
+            )
+
+            logging.info("Enregistrement du nouvel artefact PCA dans ML Flow")
+            joblib.dump(pca, f"{artifact_path}/pca.pkl")
+            ML_Flow_Operations().save_model_artefact(f"{artifact_path}/pca.pkl")
+
+        else:
+            logging.info("Récupération du précédent artefact PCA en local")
+            pca = joblib.load(f"{artifact_path}/pca.pkl")
+
+            self.X_num_train_pca = pca.transform(self.X_num_train_scaled)
             
 
     def hsstack_features(self):
@@ -286,8 +342,26 @@ class Preprocessing:
         et retourne les matrices d'entraînement et de test combinées.
         """
         if not self.prediction_pipe:
-            self.X_train_combined = hstack([self.X_text_train_tfidf, self.X_num_train_scaled]) 
-            self.X_test_combined = hstack([self.X_text_test_tfidf, self.X_num_test_scaled])
+            self.X_train_combined = hstack([self.X_text_train_svd, self.X_num_train_pca]) 
+            self.X_test_combined = hstack([self.X_text_test_svd, self.X_num_test_pca])
 
         if self.prediction_pipe:
-            self.X_train_combined = hstack([self.X_text_train_tfidf, self.X_num_train_scaled])
+            self.X_train_combined = hstack([self.X_text_train_svd, self.X_num_train_pca])
+
+    def np_hsstack_features(self):
+        if not self.prediction_pipe:
+            self.X_train_combined = np.hstack([
+                self.X_text_train_svd,
+                self.X_num_train_pca
+            ])
+
+            self.X_test_combined = np.hstack([
+                self.X_text_test_svd,
+                self.X_num_test_pca
+            ])
+
+        if self.prediction_pipe:
+            self.X_train_combined = np.hstack([
+                self.X_text_train_svd,
+                self.X_num_train_pca
+            ])
