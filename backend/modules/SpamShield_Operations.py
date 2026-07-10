@@ -26,12 +26,37 @@ class SpamShield_Operations():
         banned_patterns_found = business_rules.banned_patterns_found
         # si ham envoyer par mail au destinataires, si spam ne rien envoyer(non urgent - nice to hace)
         logging.info(f'model = {prediction_model}, business rules = {prediction_business_rules}')
+        # if prediction_model[0] or prediction_business_rules:
+        #     logging.info("is spam")
+        #     Mail_Operations().send_mail(message['text'].iloc[0], metadata, float(model.confidence_score), "spam")
+        #     final_label = 1
+        # else:
+        #     logging.info(f'Potentielement un message légitime. model = {prediction_model}, business rules = {prediction_business_rules}')
+        #     Mail_Operations().send_mail(message['text'].iloc[0], metadata, float(model.confidence_score), "ham")
+        #     final_label = 0
+
         if prediction_model[0] or prediction_business_rules:
             logging.info("is spam")
+            Mail_Operations().send_mail(
+                message['text'].iloc[0],
+                metadata,
+                model.confidence_score,
+                "spam"
+            )
+
             final_label = 1
+
         else:
-            logging.info(f'Potentielement un message légitime. model = {prediction_model}, business rules = {prediction_business_rules}')
-            Mail_Operations().send_mail(message['text'].iloc[0], metadata)
+            logging.info(f'Potentiellement un message légitime. model = {prediction_model}, business rules = {prediction_business_rules}')
+            Mail_Operations().send_mail(
+                message['text'].iloc[0],
+                metadata,
+                model.confidence_score,
+                "ham"
+            )
+            final_label = 0
+        
+        if not prediction_model[0]:
             final_label = 0
         # stoquer information crypté et version passé au pipeline de préprocessing
         Postgres_DB().save_message(pred_text=pred_text, 
@@ -39,7 +64,7 @@ class SpamShield_Operations():
                                    metadata=metadata,
                                    banned_patterns_found=banned_patterns_found,
                                    model_pred=bool(prediction_model[0]),
-                                   model_confidence=float(model.confidence_score),
+                                   model_confidence=model.confidence_score,
                                    business_rules_label=bool(prediction_business_rules),
                                    final_label=bool(final_label))
         

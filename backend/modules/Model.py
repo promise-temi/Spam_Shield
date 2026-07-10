@@ -24,13 +24,14 @@ import joblib
 
 
 class Model:
-    def __init__(self, prediction_pipe=False, model=LinearSVC(max_iter=15000, random_state=42), model_name="LinearSVC", metadata={}):
+    def __init__(self, prediction_pipe=False, model=LinearSVC(max_iter=20000, random_state=42), model_name="LinearSVC", metadata={}, seuil_confiance=True):
         self.prediction_pipe = prediction_pipe
         self.corpus_path = f"{os.path.dirname(__file__)}/data/corpus.parquet"
         self.artifact_path = f"{os.path.dirname(__file__)}/data"
         self.model = model
         self.model_name = model_name
         self.metadata = metadata
+        self.seuil_confiance = seuil_confiance
 
     def build_virgin_model_pipeline(self, X_train, X_test, y_train, y_test):
         """Cette méthode exécute l'ensemble du pipeline de construction d'un modèle vierge.
@@ -153,9 +154,20 @@ class Model:
         model = joblib.load( f"{self.artifact_path}/model.pkl")
         y_pred = model.predict(X)
         self.get_confidence(model, X)
-        return y_pred
+        if self.seuil_confiance:
+            final_pred = self.confidence_based_pred(y_pred, self.confidence_score)
+            return final_pred
+        else:
+            return y_pred
     
     def get_confidence(self, model, X):
         scores = model.decision_function(X)
         confidence = 1 / (1 + np.exp(-np.abs(scores)))
-        self.confidence_score = confidence[0]
+        self.confidence_score = float(confidence[0])
+
+    def confidence_based_pred(self, pred, confidence):
+        if pred[0] == 0 and confidence <= 0.60:
+            pred[0] = not pred[0]
+            return pred
+        else:
+            return pred

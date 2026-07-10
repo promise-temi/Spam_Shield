@@ -85,7 +85,7 @@ signature_words = [
 
 
 class NLP_Feat_Eng:
-    def __init__(self, df, corpus_path="", metadata=""):
+    def __init__(self, df, corpus_path="", metadata=None):
         self.df = df
         self.corpus_path = corpus_path
 
@@ -100,6 +100,8 @@ class NLP_Feat_Eng:
         self.greeting_words = greeting_words
         self.politeness_words = politeness_words
         self.signature_words = signature_words
+
+        self.prediction_pipe = False
 
         self.regex_decl = r"[\w ]\.(?!\.)"
         self.regex_interrog = r"[\w ]\?(?!\?)"
@@ -298,8 +300,11 @@ class NLP_Feat_Eng:
         self.replace_urls()
         self.modified_word_count()
         self.replace_greetings_politeness_signatures()
-        self.replace_digits()
+        self.replace_dates()
+        
         self.clean_special_characters()
+        if self.prediction_pipe:
+            self.replace_sensitive_personal_data()
 
         logging.info("Fin du pipeline de feature engineering NLP")
 
@@ -759,10 +764,10 @@ class NLP_Feat_Eng:
         if "text_transformed" not in self.df.columns:
             self.df['text_transformed'] = self.df['text_lower']
     
-        # self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_company_email, "[CORP_EMAIL]", regex=True)
-        # self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_contact, "[CONTACT_EMAIL]", regex=True)
-        # self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_noreply, "[NO_REPLY_EMAIL]", regex=True)
-        # self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_suspect_email, "[SUSPECT_EMAIL]", regex=True)
+        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_company_email, "[EMAIL]", regex=True)
+        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_contact, "[CONTACT_EMAIL]", regex=True)
+        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_noreply, "[NO_REPLY_EMAIL]", regex=True)
+        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_suspect_email, "[SUSPECT_EMAIL]", regex=True)
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_email, "[EMAIL]", regex=True)
 
 
@@ -789,8 +794,8 @@ class NLP_Feat_Eng:
         if "text_transformed" not in self.df.columns:
             self.df['text_transformed'] = self.df['text_lower']
     
-        # self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_suspicious_url, "[SUSPICIOUS_URL]", regex=True)
-        # self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_shortened, "[SHORTENED_URL]", regex=True)
+        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_suspicious_url, "[SUSPICIOUS_URL]", regex=True)
+        self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_shortened, "[SHORTENED_URL]", regex=True)
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_url, "[URL]", regex=True)
 
     def modified_word_count(self):
@@ -924,3 +929,6 @@ class NLP_Feat_Eng:
         tools_.count_shortened_urls()
         tools_.count_suspicious_urls()
         return tools_.df
+    
+
+    

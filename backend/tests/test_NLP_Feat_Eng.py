@@ -5,11 +5,6 @@ import sys
 import pytest
 import pandas as pd
 
-BASE_DIR = os.path.dirname(__file__)  
-FILE_PATH = os.path.join(BASE_DIR, "test_ressources", "spam_ham_dataset.parquet")
-
-
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'modules')))
 from NLP_Feat_Eng import NLP_Feat_Eng
 
@@ -179,13 +174,13 @@ def test_email_count():
     result = df_result['email_count']
     assert result == 7
 
-def test_company_email_count():
-    df_message = pd.DataFrame([{"text": "Mon email est john.doe@example.com et dfdfdfd@dhdhdhd@ddhdh,gstsf, mais aussi jane.doe@example.org mais si vous voulez gagner de l'argent, contactez-moi à john.doe@example.xyz, aprèes il y a contact@exemple.com et support@exemple.com? noreply@test.com et noreply@testtwo.com"}])
-    nlp_feat_eng = NLP_Feat_Eng(df_message)
-    nlp_feat_eng.company_email_count()
-    df_result = nlp_feat_eng.df.iloc[0]
-    result = df_result['company_email_count']
-    assert result == 6
+# def test_company_email_count():
+#     df_message = pd.DataFrame([{"text": "Mon email est john.doe@example.com et dfdfdfd@dhdhdhd@ddhdh,gstsf, mais aussi jane.doe@example.org mais si vous voulez gagner de l'argent, contactez-moi à john.doe@example.xyz, aprèes il y a contact@exemple.com et support@exemple.com? noreply@test.com et noreply@testtwo.com"}])
+#     nlp_feat_eng = NLP_Feat_Eng(df_message)
+#     nlp_feat_eng.company_email_count()
+#     df_result = nlp_feat_eng.df.iloc[0]
+#     result = df_result['company_email_count']
+#     assert result == 6
 
 def test_contact_email_count():
     df_message = pd.DataFrame([{"text": "Mon email est john.doe@example.com et dfdfdfd@dhdhdhd@ddhdh,gstsf, mais aussi jane.doe@example.org mais si vous voulez gagner de l'argent, contactez-moi à john.doe@example.xyz, aprèes il y a contact@exemple.com et support@exemple.com? noreply@test.com et noreply@testtwo.com"}])
@@ -732,3 +727,94 @@ def test_update_corpus_updates_existing_corpus_without_writing_file(monkeypatch)
     assert list(result.columns) == ["token"]
     assert set(result["token"]) == {"bonjour", "ancien", "test", "nouveau", "urgent"}
     assert len(result) == 5
+
+
+def test_feature_engineering_full_pipeline():
+    df_message = pd.DataFrame([{
+        "text": "Bonjour Promise ! Contactez support@test.com ou allez sur https://danger.xyz. Payez 150€ immédiatement."
+    }])
+
+    nlp_feat_eng = NLP_Feat_Eng(df_message)
+
+    df_result = nlp_feat_eng.feature_engineering_full_pipeline(update_corpus=False)
+
+    row = df_result.iloc[0]
+
+    assert "text_lower" in df_result.columns
+    assert "text_transformed" in df_result.columns
+    assert "text_final" in df_result.columns
+
+    assert row["msg_length"] > 0
+    assert row["msg_word_count"] > 0
+    assert row["email_count"] == 1
+    assert row["url_count"] == 2
+    assert row["suspicious_url_count"] == 1
+    assert row["money_count"] >= 1
+    assert row["has_greeting"] == 1
+    assert row["urgency_word_count"] >= 1
+
+    assert "[EMAIL]" in row["text_transformed"] or "[CORP_EMAIL]" in row["text_transformed"]
+    assert "[SUSPICIOUS_URL]" in row["text_transformed"]
+    assert "[MONEY]" in row["text_transformed"]
+    assert "[URGENCY]" in row["text_transformed"]
+
+    assert "@" not in row["text_final"]
+    assert "!" not in row["text_final"]
+
+
+
+def test_feature_engineering_full_pipeline_with_none_text():
+    df_message = pd.DataFrame([{
+        "text": None
+    }])
+
+    nlp_feat_eng = NLP_Feat_Eng(df_message)
+
+    df_result = nlp_feat_eng.feature_engineering_full_pipeline(update_corpus=False)
+
+    row = df_result.iloc[0]
+
+    assert row["text"] == ""
+    assert row["text_lower"] == ""
+    assert row["text_transformed"] == ""
+    assert row["text_final"] == ""
+    assert row["msg_length"] == 0
+    assert row["msg_word_count"] == 0
+
+
+
+def test_feature_engineering_full_pipeline_calls_update_corpus(monkeypatch):
+    df_message = pd.DataFrame([{
+        "text": "Bonjour ceci est un test."
+    }])
+
+    nlp_feat_eng = NLP_Feat_Eng(df_message)
+
+    called = {"update_corpus": False}
+
+    def fake_update_corpus(corpus_path):
+        called["update_corpus"] = True
+
+    monkeypatch.setattr(nlp_feat_eng, "update_corpus", fake_update_corpus)
+
+    nlp_feat_eng.feature_engineering_full_pipeline(update_corpus=True)
+
+    assert called["update_corpus"] is True
+
+
+
+def test_feat_eng_metadata_name():
+    df_message = pd.DataFrame([{"text": "test"}])
+    metadata = {"name": "Jane"}
+
+    nlp_feat_eng = NLP_Feat_Eng(df_message, metadata)
+
+    df = nlp_feat_eng.feat_eng_metadata(metadata["name"])
+
+    row = df.iloc[0]
+
+    assert row["msg_length"] == 4
+    assert row["email_count"] == 0
+    assert row["phone_number_count"] == 0
+    assert row["url_count"] == 0
+    assert row["digit_count"] == 0

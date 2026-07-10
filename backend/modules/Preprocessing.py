@@ -75,7 +75,6 @@ class Preprocessing:
 
     def remove_stopwords(self, text):
         words = text.split()
-
         filtered_words = []
 
         for word in words:
