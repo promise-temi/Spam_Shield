@@ -1,0 +1,63 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    color: #03005B;
+    font-family: "Lato", sans-serif;
+}
+body{
+    background-color: #F8FAFE;
+}
+main{
+    padding-left: 30px;
+    padding-right: 30px;
+    padding-bottom: 50px;
+}
+.card-deco{
+    border-radius: 5px;
+    background-color: white;
+    box-shadow: #363fa74a 0px 3px 8px;
+    border: #282f7f1e 1px solid;
+}
+
+fieldset{
+    border: none;
+}
+
+
+
+
+
+
+
+
+/* BARRE DE NAVIGATION */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #00000094 rgba(146, 146, 146, 0.18);
+}
+
+/* TITRES */
+div.title{
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+div.title h3{
+    font-size: 14px;
+    font-weight: 800;
+}
+
+/* bouttons */
+
+button{
+    font-weight: 800;
+    padding: 5px 10px;
+    font-size: 11px;
+    background-color: #DDE3F1;
+    border: solid 1px #465c923c;
+    border-radius: 5px;
+    cursor: pointer;
+}
