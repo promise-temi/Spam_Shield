@@ -1,0 +1,107 @@
+main{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+section{
+    padding: 10px 20px;
+    padding-bottom: 30px;
+    width: 800px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+div.cards{
+    display: grid;
+    gap: 10px;
+    margin-top: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    color: #65639B;
+
+}
+div.card{
+    /* min-height: 200px; */
+    background-color: #F7F8FC;
+    padding: 10px;
+    position: relative;
+    padding-bottom: 50px;
+}
+
+h4{
+    margin-bottom: 20px;
+    font-size: 14px;
+    font-weight: 900;
+    opacity: 0.6;
+}
+
+p{
+    font-size: 14px;
+}
+
+input[type="checkbox"]{
+    position: absolute;
+    right: 15px;
+    bottom: 10px;
+}
+
+
+/* FORM */
+
+
+form{
+    padding: 20px;
+    position: relative;
+    padding-bottom: 60px;
+}
+
+form input[type="text"]{
+    border:  #03005b5b 1px solid;
+    border-radius: 5px;
+    height: 25px;
+}
+form div.nom-et-prenom,div.email-et-telephone{
+    display: flex;
+    gap: 25px;
+}
+
+form div.nom-et-prenom input{
+    width: 300px;
+}
+form div.email-et-telephone input{
+    width: 300px;
+}
+
+
+form label{
+    font-size: 11px;
+    font-weight: 800;
+    opacity: 0.6;
+    margin-bottom: 5px;
+}
+
+form textarea{
+    height: 200px;
+    border:  #03005b5b 1px solid;
+    border-radius: 5px;
+
+}
+
+
+fieldset{
+    display: flex;
+    flex-direction: column;
+    
+}
+
+form div.form-fields{
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+button{
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+}
+

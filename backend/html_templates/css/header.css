@@ -1,0 +1,28 @@
+header{
+    background-color: white;
+    border-bottom: #282f7f36 1px solid;
+}
+
+header h1{
+    font-family: "Major Mono Display", monospace;
+    font-size: 20PX;
+}
+
+header{
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 20px;
+    margin-bottom: 50px;
+}
+header nav.nav-bar ul{
+    display: flex;
+    list-style-type: none;
+    gap: 40px;
+    font-size: 13px;
+    position: relative;
+    bottom: -5px;
+}
+
+header nav.nav-bar ul li{
+    cursor: pointer;
+}
