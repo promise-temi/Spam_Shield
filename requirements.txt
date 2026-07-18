@@ -27,3 +27,5 @@ smtplib
 cryptography
 
 asyncio
+fastapi
+uvicorn

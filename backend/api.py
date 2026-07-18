@@ -1,178 +1,197 @@
-from modules.Database import Postgres_DB
-import logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-import sys
-import os
-import pandas as pd
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import LinearSVC
-from sklearn.naive_bayes import MultinomialNB
+from fastapi import FastAPI
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
-from modules.SpamShield_Operations import SpamShield_Operations
-from modules.Model import Model
+app = FastAPI()
 
-Postgres_DB(sql_file_path=f"{os.path.dirname(__file__)}/modules/data/db.sql").create_tables_if_not_exist()
-Postgres_DB().add_prospect_mail(['temi.promisejohn@gmail.com'])
 
-# df = pd.DataFrame([{'text':'Je teste mon propre outil de détection de spam, je trouve qu\'il est très efficace !', 'label':1}])
-# metadata = {
-#     "name":"Promise",
-#     "surname":"John",
-#     "email":"Promise.john@gmail.com",
-#     "phone":"0653389212",
-#     "subject":"Je teste mon propre outil de détection de spam :)",
-# }
+# -- PAGE FRONTEND TABLEAU DE BORD --
+@app.get("tableau-de-bord")
+def showpage_tableau_de_bord():
+    pass
 
-# SpamShield_Operations().New_Message(df, metadata)
+# -- PAGE FRONTEND BANC DE TESTS --
+app.get("banc-de-test")
+def showpage_banc_de_test():
+    pass
 
-# models = [
-#     RidgeClassifierModel(),
-#     SGDClassifierModel(),
-#     RandomForestModel(),
-#     CatBoostModel(),
-#     LightGBMModel(),
-#     FastTextModel(),
-#     TransformerModel(),
-#     LogisticRegression(),
-#     LinearSVC(),
-# ]
+# -- PAGE FRONTEND PARAMETRES --
+app.get("parametres")
+def showpage_parametres():
+    pass
 
+
+
+# -- ROUTES TABLEAU DE BORD --
+app.get('dashbord-metrics-and-graphs')
+def get_dashbord_metrics_and_graphs()->dict:
+    """
+    Pour le tableau de bord:
+        - Réccuperation de la période actuelle
+        - Réccupération des données pour les métriques 
+        - Réccuperation des données pour les graphiques 
     
+    Returns:
+        {
+            "period": {
+                "start" : String,
+                "end" : String
+            },
+            "metrics": {
+                "messages" : Int,
+                "legitimes" : Int,
+                "indesirable" : Int,
+                "corrections" : Int,
+                "reclassement" : Int
+            },
+            "graphics" :{
+                "distrubution_par_categorie" : {
+                    "ham_prediction_ia" : Int,
+                    "spam_patterns_interdits" : Int,
+                    "spam_prediction_ia" : Int,
+                    "spam_low_condidence" : Int,
+                    "ham_corriges" : Int,
+                    "spam_corriges" : Int,
+                },
+                "evolution_par_categorie" : {
+                    "ham_prediction_ia" : List[int],
+                    "spam_patterns_interdits" : List[int],
+                    "spam_prediction_ia" : List[int],
+                    "spam_low_condidence" : List[int],
+                    "ham_corriges" : List[int],
+                    "spam_corriges" : List[int],
+                }
+            }
+        }
+    """
+    pass
 
-model = Model()
-model.AI_full_virgin_model_training_pipeline()
-df = pd.DataFrame([
-    {'label': 0, 'text': "Bonjour, je m'intéresse à vos services"},
-    {'label': 1, 'text': "Gagnez de l'argent rapidement en cliquant ici !"},
-    {'label': 0, 'text': "Merci pour votre message. Je vous répondrai bientôt."},
-    {'label': 1, 'text': "Offre spéciale : obtenez 50% de réduction sur tous nos produits !"},
-    {'label': 0, 'text': "Je suis désolé, mais je ne suis pas intéressé par votre offre."},
-    {'label': 1, 'text': "Félicitations ! Vous avez gagné un iPhone. Cliquez ici pour réclamer votre prix."},
-    {'label': 0, 'text': "Merci pour votre réponse rapide. Je vais réfléchir à votre proposition."},
-    {'label': 1, 'text': "Ne manquez pas cette opportunité unique de gagner de l'argent facilement !"},
-    {'label': 0, 'text': "Je vous remercie pour votre temps et votre considération. Bonne journée !"},
-    {'label': 1, 'text': "Alerte de sécurité : votre compte a été compromis. Cliquez ici pour sécuriser votre compte."},
-    {'label': 0, 'text': "Je suis désolé, mais je ne suis pas intéressé par votre offre."},
-    {'label': 1, 'text': "Félicitations ! Vous avez gagné un iPhone. Cliquez ici pour réclamer votre prix."},
-    {'label': 0, 'text': "Merci pour votre réponse rapide. Je vais réfléchir à votre proposition."},
-    {'label': 1, 'text': "Ne manquez pas cette opportunité unique de gagner de l'argent facilement !"},
-    {'label': 0, 'text': "Je vous remercie pour votre temps et votre considération. Bonne journée !"},
-    {'label': 1, 'text': "Alerte de sécurité : votre compte a été compromis. Cliquez ici pour sécuriser votre compte."}
-])
+app.get("get-messages/{trier_par}/{filter_par}")
+def get_messages(trier_par:str, filtrer_par:str)->dict:
+    """
+    Réccupération des message - Tout (par défault) ou filtré (selon filtres)
 
-model.AI_full_retrain_model_pipeline(df=df)
-# df = pd.DataFrame([{'text':'Je teste mon propre outil de détection de spam, je trouve qu\'il est très efficace ! Si tu est intéressé il y a un site qui fait a peu près la meme chose. je t\'ai mis le lien : https://site_reelement_legitime.xyz', 'label':1}])
-# metadata = {
-#     "name":"Promise",
-#     "surname":"John",
-#     "email":"Promise.john@gmail.com",
-#     "phone":"0653389212",
-#     "subject":"Je teste mon propre outil de détection de spam :)",
-# }
+    Returns:
+        {
+            "messages" : List[
+                {
+                    "label" : String,
+                    "date" : String,
+                    "metadata" : Dict,
+                    "message" : String,
+                    "id" : Int
+                }
+            ]
+        }
+    """
+    pass
 
-# SpamShield_Operations().New_Message(df, metadata)
+app.get("get_message-and-related-metrics/{selected_message_id}")
+def get_message_and_related_metrics(selected_message_id:int)->dict:
+    """ 
+    Réccupère le message ainsi que les metriques et informations les predictions du model ia et métier et autres
 
-# metadata = {
-#     "name": "test",
-#     "surname": "test",
-#     "email": "test.test@test.com",
-#     "phone": "0653389212",
-#     "subject": "SpamShield Test",
-# }
+    Returns:
+        {
+            "message_consulte" : Boolean,
+            "message_recu" : Boolean,
+            "label_final : String,
+            "model_ia_prediction" : String,
+            "model_ia_score_confiance" : Float,
+            "regles_metiers_deliberation" : String,
+            "regles_metiers_shemas_interdit" : List,
+            "reclasse" : Boolean,
+            "corrige" : Boolean,
+            "date" : String,
+            "metadata" : Dict,
+            "message" : String,
+            "id" : Int
+        }
+    """
+    pass 
 
-# messages = [
+# -- ROUTES BANC DE TESTS --
+app.post("test-new-message")
+def test_new_message():
+    """Depuis l'interface SpamSield permet de tester l'ingestion d'un nouveau message"""
+    pass
 
-#     # HAM
-#     "Salut Promise ! On se retrouve demain à 14h pour travailler sur le projet SpamShield ?",
-#     "Merci beaucoup pour ton aide hier. Le projet avance vraiment bien grâce à toi.",
-#     "Je t’envoie la documentation officielle de Python : https://docs.python.org/3/",
-#     "Je viens de publier mon portfolio : https://promise-john.github.io. Dis-moi ce que tu en penses !",
-#     "Bonjour, votre commande a été expédiée. Vous recevrez bientôt votre numéro de suivi.",
-#     "Bonjour Promise, j’ai découvert ton projet et je souhaiterais échanger avec toi. Voici une démonstration : https://github-demo-security.xyz",
-#     "Profitez de -20 % sur tous nos produits ce week-end avec le code ETE20.",
-#     "Je teste mon propre outil de détection de spam, je trouve qu'il est très efficace ! Si tu es intéressé il y a un site qui fait à peu près la même chose : https://site_reelement_legitime.xyz",
-
-#     # SPAM
-#     "Votre compte bancaire sera suspendu dans 24 heures. Cliquez immédiatement sur https://secure-bank-login.xyz afin de confirmer votre identité.",
-#     "Votre colis est bloqué. Payez 2,99€ immédiatement afin d’éviter son retour à l’expéditeur : https://laposte-suivi.xyz",
-#     "URGENT : une activité inhabituelle a été détectée sur votre compte. Connectez-vous immédiatement afin d’éviter sa fermeture.",
-#     "Support Microsoft : votre ordinateur est infecté. Appelez immédiatement le +33 1 80 00 00 00.",
-#     "Félicitations ! Vous avez gagné un iPhone 17 Pro. Cliquez ici pour recevoir votre récompense.",
-#     "Votre solde CPF expire aujourd’hui. Activez vos droits avant minuit.",
-#     "Le Gouvernement vous informe qu’une amende est en attente. Consultez immédiatement votre dossier.",
-#     "Votre assurance maladie nécessite une vérification urgente. Connectez-vous maintenant pour éviter la suspension de vos droits.",
-#     "Une tentative de connexion a été détectée depuis la Russie. Vérifiez immédiatement votre compte.",
-#     "Bonjour Madame, veuillez confirmer vos informations personnelles immédiatement afin d’éviter le blocage de votre compte.",
-#     "Vous avez gagné 1000 euros ! Confirmez votre identité et vos coordonnées bancaires.",
-#     "Dernier rappel : votre paiement de 1,99 € est requis pour débloquer votre colis.",
-# ]
-
-# for text in messages:
-#     df = pd.DataFrame([{"text": text}])
-#     SpamShield_Operations().New_Message(df, metadata)
-
-
-# model = Model(model=LogisticRegression(max_iter=15000, n_jobs=-1, random_state=42), model_name="LogisticRegression")
-# model.AI_full_virgin_model_training_pipeline()
-# df = pd.DataFrame([
-#     {'label': 0, 'text': "Bonjour, je m'intéresse à vos services"},
-#     {'label': 1, 'text': "Gagnez de l'argent rapidement en cliquant ici !"},
-#     {'label': 0, 'text': "Merci pour votre message. Je vous répondrai bientôt."},
-#     {'label': 1, 'text': "Offre spéciale : obtenez 50% de réduction sur tous nos produits !"},
-#     {'label': 0, 'text': "Je suis désolé, mais je ne suis pas intéressé par votre offre."},
-#     {'label': 1, 'text': "Félicitations ! Vous avez gagné un iPhone. Cliquez ici pour réclamer votre prix."},
-#     {'label': 0, 'text': "Merci pour votre réponse rapide. Je vais réfléchir à votre proposition."},
-#     {'label': 1, 'text': "Ne manquez pas cette opportunité unique de gagner de l'argent facilement !"},
-#     {'label': 0, 'text': "Je vous remercie pour votre temps et votre considération. Bonne journée !"},
-#     {'label': 1, 'text': "Alerte de sécurité : votre compte a été compromis. Cliquez ici pour sécuriser votre compte."},
-#     {'label': 0, 'text': "Je suis désolé, mais je ne suis pas intéressé par votre offre."},
-#     {'label': 1, 'text': "Félicitations ! Vous avez gagné un iPhone. Cliquez ici pour réclamer votre prix."},
-#     {'label': 0, 'text': "Merci pour votre réponse rapide. Je vais réfléchir à votre proposition."},
-#     {'label': 1, 'text': "Ne manquez pas cette opportunité unique de gagner de l'argent facilement !"},
-#     {'label': 0, 'text': "Je vous remercie pour votre temps et votre considération. Bonne journée !"},
-#     {'label': 1, 'text': "Alerte de sécurité : votre compte a été compromis. Cliquez ici pour sécuriser votre compte."}
-# ])
+app.post("new-message")
+def new_message():
+    """Depuis un formulaire d'un site externe appartenant a l'utilisateur fait l'ingestion d'un nouveau message"""
+    pass
 
 
+# -- ROUTES PARAMETRES --
 
-# model.AI_full_retrain_model_pipeline(df=df)
-# df = pd.DataFrame([{'text':'Je teste mon propre outil de détection de spam, je trouve qu\'il est très efficace ! si tu veut esseyez clique sur ce lien : https://faux_site_legitime.com', 'label':1}])
-# metadata = {
-#     "name":"Promise",
-#     "surname":"John",
-#     "email":"Promise.john@gmail.com",
-#     "phone":"0653389212",
-#     "subject":"Je teste mon propre outil de détection de spam :)",
-# }
+app.get("get-regexes")
+def get_regexes()->dict:
+    """
+    Réccupère les expression régulieres interdites
+
+    Returns:
+        {
+           "regexes" : List 
+        }
+    """
+    pass
+
+app.post("new-regex")
+def new_regex():
+    """Ajoute un expression régulieres interdite"""
+    pass
+
+app.delete("delete-regex/{id}")
+def delete_regex(id:int):
+    """Supprime une expression régulieres interdite"""
+    pass
+
+app.get("get-detinataires")
+def get_detinataires()->dict:
+    """
+    Réccupère les destinataires
+    Returns:
+        {
+           "destinataires" : List 
+        }
+    """
+    pass
+
+app.post("new-detinataires")
+def new_detinataires():
+    """Ajoute un detinataires""" 
+    pass
+
+app.delete("delete-destinataire/{id}")
+def delete_destinataire(id:int):
+    """Supprime un destinataire"""
+    pass
+
+app.get("get-champs-obligatoires-status")
+def get_champs_obligatoire_status():
+    """
+    Récupère le status des champs obligatoires
+
+    Returns : {
+        "nom" : Boolean,
+        "Prenom" : Boolean,
+        "Objet" : Boolean,
+        "Email" : Boolean,
+        "Telephone" : Boolean,  
+    }
+    """
+    pass
+
+app.put("update-champs-obligatoires-status/{status_id}")
+def update_champs_obligatoire_status(status_id:int):
+    """met à jour le status des champs obligatoires"""
+    pass
 
 
-# SpamShield_Operations().New_Message(df, metadata)
+app.post("restore-ai-model")
+def restore_ai_model():
+    """Reccupere un précédent model d'IA souhaité."""
+    pass
 
-
-# model = Model(model = LogisticRegression(max_iter=1000, n_jobs=-1, random_state=42), model_name="LogisticRegression")
-# model.AI_full_virgin_model_training_pipeline()
-# df = pd.DataFrame([
-#     {'label': 0, 'text': "Bonjour, je m'intéresse à vos services"},
-#     {'label': 1, 'text': "Gagnez de l'argent rapidement en cliquant ici !"},
-#     {'label': 0, 'text': "Merci pour votre message. Je vous répondrai bientôt."},
-#     {'label': 1, 'text': "Offre spéciale : obtenez 50% de réduction sur tous nos produits !"},
-#     {'label': 0, 'text': "Je suis désolé, mais je ne suis pas intéressé par votre offre."},
-#     {'label': 1, 'text': "Félicitations ! Vous avez gagné un iPhone. Cliquez ici pour réclamer votre prix."},
-#     {'label': 0, 'text': "Merci pour votre réponse rapide. Je vais réfléchir à votre proposition."},
-#     {'label': 1, 'text': "Ne manquez pas cette opportunité unique de gagner de l'argent facilement !"},
-#     {'label': 0, 'text': "Je vous remercie pour votre temps et votre considération. Bonne journée !"},
-#     {'label': 1, 'text': "Alerte de sécurité : votre compte a été compromis. Cliquez ici pour sécuriser votre compte."},
-#     {'label': 0, 'text': "Je suis désolé, mais je ne suis pas intéressé par votre offre."},
-#     {'label': 1, 'text': "Félicitations ! Vous avez gagné un iPhone. Cliquez ici pour réclamer votre prix."},
-#     {'label': 0, 'text': "Merci pour votre réponse rapide. Je vais réfléchir à votre proposition."},
-#     {'label': 1, 'text': "Ne manquez pas cette opportunité unique de gagner de l'argent facilement !"},
-#     {'label': 0, 'text': "Je vous remercie pour votre temps et votre considération. Bonne journée !"},
-#     {'label': 1, 'text': "Alerte de sécurité : votre compte a été compromis. Cliquez ici pour sécuriser votre compte."}
-# ])
-
-# model.AI_full_retrain_model_pipeline(df=df)
-
-
-
-
+app.post("reset-ai-model")
+def reset_ai_model():
+    """Reintilise le modèle d'ia et supprime toutes les donnée."""
+    pass
