@@ -212,7 +212,19 @@ class Postgres_DB:
         cur.close()
         logging.info("Tous les messages ont été supprimés de la base de données")
 
-
+    def get_all_regex_rules(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT id, pattern FROM regexes")
+        rows = cur.fetchall()
+        regex_rules = []
+        for row in rows:
+            rule = {
+                "id": row[0],
+                "pattern": row[1]
+            }
+            regex_rules.append(rule)
+        return regex_rules
+    
     def add_regex_rule(self, pattern:str):
         cur = self.conn.cursor()
         cur.execute("INSERT INTO regexes (pattern) VALUES (%s);", (pattern,))
