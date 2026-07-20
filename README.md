@@ -86,3 +86,40 @@ Message brut
        │
        ▼
 Vecteur de caractéristiques
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Phase N
+┌─────────────────────┐
+│ 21 jours            │
+│ collecte feedback   │
+│ corrections labels  │
+└─────────────────────┘
+          ↓
+
+Période de carence
+┌─────────────────────┐
+│ 7 jours             │
+│ attente labels      │
+│ stabilisation       │
+└─────────────────────┘
+          ↓
+
+Réentraînement
+          ↓
+
+Évaluation
+          ↓
+
+Déploiement
