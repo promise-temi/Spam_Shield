@@ -1,3 +1,32 @@
+<template>
+<!-- HEADER -->
+<BarreDeNavigation></BarreDeNavigation>
+<router-view />
+</template>
+<script>
+
+// COMPOSANTS
+import BarreDeNavigation from './Components/BarreDeNavigation.vue';
+
+// PAGES
+import TableauDeBord from './Views/TableauDeBord.vue';
+
+export default{
+    data(){
+        return{
+
+        }
+    },
+    components:{
+      // COMPOSANTS
+        BarreDeNavigation,
+      // PAGES
+        TableauDeBord,
+    }
+}
+
+</script>
+<style>
 * {
     box-sizing: border-box;
     margin: 0;
@@ -69,9 +98,9 @@ div.title h3{
 /* bouttons */
 
 button{
-    font-weight: 800;
+    font-weight: 600;
     padding: 5px 10px;
-    font-size: 14px;
+    font-size: 14px !important;
     background-color: #DDE3F1;
     border: solid 1px #465c923c;
     border-radius: 5px;
@@ -89,3 +118,16 @@ input[type="checkbox"]{
     width: 20px;
     height: 20px;
 }
+
+
+/*  ROUTERLINKS */
+
+
+a{
+  color: inherit;
+  text-decoration: none;
+  background: none;
+}
+
+
+</style>
