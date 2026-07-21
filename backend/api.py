@@ -1,57 +1,12 @@
 from fastapi import FastAPI, Request
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
+
 import os 
 import sys
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = FastAPI()
-templates = Jinja2Templates(directory=f"{BASE_DIR}/html_templates")
-# Static files (CSS, JS, images)
-app.mount("/css", StaticFiles(directory=f"{BASE_DIR}/html_templates/css"), name="static_css")
-app.mount("/js", StaticFiles(directory=f"{BASE_DIR}/html_templates/js"), name="static_js")
-app.mount("/images", StaticFiles(directory=f"{BASE_DIR}/html_templates/images"), name="static_images")
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from modules.Database import Postgres_DB
-
-
-
-# -- PAGE FRONTEND TABLEAU DE BORD --
-@app.get("/tableau-de-bord")
-def showpage_tableau_de_bord(request: Request):
-    regexes = Postgres_DB().get_all_regex_rules()
-    return templates.TemplateResponse("tableau-de-bord.html", {"request": request, "regexes": regexes})
-
-# -- PAGE FRONTEND BANC DE TESTS --
-@app.get("/banc-de-test")
-def showpage_banc_de_test(request: Request):
-    return templates.TemplateResponse("banc-de-test.html", {"request": request})
-
-@app.get("/parametres")
-def showpage_parametres(request: Request):
-    return templates.TemplateResponse("options.html", {"request": request})
-
-
-# # -- PAGE FRONTEND PARAMETRES --
-# app.get("/parametres")
-# def showpage_parametres(request: Request):
-#     return templates.TemplateResponse("options.html", {"request": request})
-
-
-# # -- PAGE FRONTEND TABLEAU DE BORD --
-# @app.get("/tableau-de-bord")
-# def showpage_tableau_de_bord(request: Request):
-#     return templates.TemplateResponse("tableau-de-bord.html", {"request": request})
-
-# # -- PAGE FRONTEND BANC DE TESTS --
-# app.get("/banc-de-test")
-# def showpage_banc_de_test(request: Request):
-#     return templates.TemplateResponse("banc-de-test.html", {"request": request})
-
-# # -- PAGE FRONTEND PARAMETRES --
-# app.get("/parametres")
-# def showpage_parametres(request: Request):
-#     return templates.TemplateResponse("options.html", {"request": request})
 
 
 

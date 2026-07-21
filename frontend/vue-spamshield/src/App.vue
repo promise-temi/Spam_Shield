@@ -73,9 +73,6 @@ textarea{
 
 
 
-
-
-
 /* BARRE DE NAVIGATION */
 
 * {
@@ -106,11 +103,6 @@ button{
     border-radius: 5px;
     cursor: pointer;
 }
-
-
-
-
-
 
 
 input[type="checkbox"]{

@@ -14,38 +14,21 @@
                 <p>Utilisez le format Regex (expression régulière) pour définir les mots ou motifs à détecter automatiquement.</p>
                 <p class="alert">Exemple : .*(insulte|injure|mot interdit).*</p>
                 <fieldset>
-                    <input type="search" name="" id="">
-                    <button>Ajouter</button>
+                    <input type="search" id="nouvelle-expression">
+                    <button v-on:click="ajouterExpression">Ajouter</button>
                 </fieldset>
             </div>
             <div class="card card2">
                 <h4>Expressions interdites enregistrés</h4>
                 
-                <div class="liste_affichages">
-                    <div>
-                        <p>expression regex</p>
-                        <button>Supprimer</button>
+                <div class="liste_affichages" v-if="expressions">
+                    <div v-for="expression in expressions">
+                        <p>{{expression.pattern}}</p>
+                        <button v-on:click="supprimerExpression(expression.id)">Supprimer</button>
                     </div>
-                    <div>
-                        <p>expression regex</p>
-                        <button>Supprimer</button>
-                    </div>
-                    <div>
-                        <p>expression regex</p>
-                        <button>Supprimer</button>
-                    </div>
-                    <div>
-                        <p>expression regex</p>
-                        <button>Supprimer</button>
-                    </div>
-                    <div>
-                        <p>expression regex</p>
-                        <button>Supprimer</button>
-                    </div>
-                    <div>
-                        <p>expression regex</p>
-                        <button>Supprimer</button>
-                    </div>
+                </div>
+                <div v-else >
+                    <p>aucune expression enregistrée pour le moment</p>
                 </div>
             </div>
         </div>
@@ -65,26 +48,21 @@
                 
                 <p>Ajoutez une adresse e-mail pour recevoir les messages légitimes et les rapports SpamShield.</p>
                 <fieldset>
-                    <input type="search" name="" id="">
-                    <button>Ajouter</button>
+                    <input type="search" id="nouveau-destinataire">
+                    <button v-on:click="ajouterDestinataire" >Ajouter</button>
                 </fieldset>
             </div>
             <div class="card card2">
                 <h4>Destinataires enregistrés</h4>
                 
-                <div class="liste_affichages">
-                    <div>
-                        <p>destinataire@email.com</p>
-                        <button>Supprimer</button>
+                <div class="liste_affichages" v-if="destinataires">
+                    <div v-for="destinataire in destinataires">
+                        <p>{{destinataire.email}}</p>
+                        <button v-on:click="supprimerDestinataires(destinataire.id)">Supprimer</button>
                     </div>
-                    <div>
-                        <p>destinataire@email.com</p>
-                        <button>Supprimer</button>
-                    </div>
-                    <div>
-                        <p>destinataire@email.com</p>
-                        <button>Supprimer</button>
-                    </div>
+                </div>
+                <div v-else >
+                    <p>aucun destinataire enregistré pour le moment</p>
                 </div>
             </div>
         </div>
@@ -183,6 +161,97 @@
 </template>
 
 <script>
+import axios from 'axios';
+
+export default{
+    data(){
+        return{
+            expressions : null,
+            destinataires : null
+        }
+    },
+    methods:{
+        // EXPRESSIONS
+        getAllExpressions(){
+            axios.get('')
+            .then(result => {
+                console.log("Expressions réccuperées avec succès")
+                this.expressions = result.data
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        },
+
+        ajouterExpression(){
+            let pattern = document.querySelector('#nouvelle-expression').value
+            let data = {
+                pattern : pattern
+            }
+            axios.post('', data)
+            .then(result => {
+                console.log(result)
+                this.getAllExpressions()
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        },
+
+        supprimerExpression(id){
+            axios.delete(`/${id}`)
+            .then(result => {
+                console.log(result)
+                this.getAllExpressions()
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        },
+
+        // DESTINATAIRES
+        getAllDestinataires(){
+            axios.get('')
+            .then(result => {
+                console.log("Destinataires réccuperées avec succès")
+                this.destinataires = result.data
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        },
+
+        ajouterDestinataires(){
+            let pattern = document.querySelector('#nouveau-destinataire').value
+            let data = {
+                pattern : pattern
+            }
+            axios.post('', data)
+            .then(result => {
+                console.log(result)
+                this.getAllDestinataires()
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        },
+
+        supprimerDestinataires(id){
+            axios.delete(`/${id}`)
+            .then(result => {
+                console.log(result)
+                this.getAllDestinataires()
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        },
+        
+        // CHAMPS OBLIGATOIRES DU FORMULAIRE
+
+        // MODEL IA
+    }
+}
  
 </script>
 
