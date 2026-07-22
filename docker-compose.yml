@@ -34,8 +34,9 @@ services:
       --port 5000
     ports:
       - "5000:5000"
-    depends_on:
-      - postgres
+    volumes:
+        - mlflow_data:/mlruns
+
 
   prometheus:
     image: prom/prometheus
@@ -43,13 +44,20 @@ services:
       - "9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-
+      - prometheus_data:/prometheus
   grafana:
     image: grafana/grafana
     ports:
       - "3000:3000"
     depends_on:
-      - prometheus
+        - prometheus
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+
 
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:
+  mlflow_data:

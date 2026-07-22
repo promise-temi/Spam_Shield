@@ -15,7 +15,7 @@
                     
                     <p>Ajouter les données de ce formulaire aux prochains entraînements du modèle.</p>
                     <fieldset>
-                        <input type="checkbox" name="for-training" id="for-training">
+                        <input type="checkbox" name="for-training" id="for-training" v-model="entrainementModel">
                     </fieldset>
                 </div>
                 <div class="card card2">
@@ -23,7 +23,7 @@
                     
                     <p>Ajouter les données de ce formulaire aux prochains entraînements du modèle.</p>
                     <fieldset>
-                        <input type="checkbox" name="for-training" id="for-training">
+                        <input type="checkbox" name="for-training" id="for-training" v-model="recevoirParMail">
                     </fieldset>
                     </div>
                 </div>
@@ -40,34 +40,34 @@
                 <div class="form-fields">
                     <div class="nom-et-prenom">
                         <fieldset>
-                            <label for="nom">Nom</label>
-                            <input type="text">
+                            <label>Nom</label>
+                            <input type="text" v-model="data.metadata.surname">
                         </fieldset>
                         <fieldset>
-                            <label for="Prenom">Prénom</label>
-                            <input type="text">
+                            <label>Prénom</label>
+                            <input type="text" v-model="data.metadata.name">
                         </fieldset>
                     </div>
                     <div class="email-et-telephone">
                         <fieldset>
-                            <label for="nom">E-mail</label>
-                            <input type="text">
+                            <label>E-mail</label>
+                            <input type="text" v-model="data.metadata.email">
                         </fieldset>
                         <fieldset>
-                            <label for="Prenom">Téléphone</label>
-                            <input type="text" class="numero">
+                            <label>Téléphone</label>
+                            <input type="text" class="numero" v-model="data.metadata.phone">
                         </fieldset>
                     </div>
                     <div class="objet">
                         <fieldset class="objet">
                             <label for="object">Objet</label>
-                            <input type="text">
+                            <input type="text" v-model="data.metadata.subject">
                         </fieldset>
                     </div>
                     <div class="message">
                         <fieldset class="message">
                             <label for="message">Message</label>
-                            <textarea name="message" id="message">
+                            <textarea name="message" id="message" v-model="data.text">
                             </textarea>
                         </fieldset>
                         
@@ -81,6 +81,46 @@
 </template>
 
 <script>
+import axios from 'axios';
+export default{
+    data(){
+        return{
+            entrainementModel : true,
+            recevoirParMail: true,
+            data : {
+                metadata : {
+                    name : '',
+                    surname : '',
+                    subject : '- TEST -  ',
+                    email : '',
+                    phone : '',
+                    form_id : 'test'
+                },
+                text : ''
+            }
+        }
+    },
+    methods:{
+        test_new_message(){
+            let data = {
+                metadata : this.data.metadata,
+                message : this.data.text,
+                settings : {
+                    entrainementModel : this.entrainementModel,
+                    recevoirParMail : this.recevoirParMail
+                }
+            }
+
+            axios.post(`\new-message`, data)
+            .then(result => {
+                console.log(result)
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        }
+    }
+}
 </script>
 
 <style scoped>

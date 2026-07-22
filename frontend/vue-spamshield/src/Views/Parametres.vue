@@ -49,7 +49,7 @@
                 <p>Ajoutez une adresse e-mail pour recevoir les messages légitimes et les rapports SpamShield.</p>
                 <fieldset>
                     <input type="search" id="nouveau-destinataire">
-                    <button v-on:click="ajouterDestinataire" >Ajouter</button>
+                    <button v-on:click="ajouterDestinataires" >Ajouter</button>
                 </fieldset>
             </div>
             <div class="card card2">
@@ -79,27 +79,27 @@
             <div class="card">
                 <h4>Nom obligatoire</h4>
                 <p>Exige la saisie du nom dans le formulaire.</p>
-                <input type="checkbox" name="" id="">
+                <input type="checkbox" v-on:click="updateFormRequirements(formRequirements.surname.key)" v-model="formRequirements.surname">
             </div>
             <div class="card">
                 <h4>Prenom obligatoire</h4>
                 <p>Exige la saisie du Prenom dans le formulaire.</p>
-                <input type="checkbox" name="" id="">
+                <input type="checkbox" v-on:click="updateFormRequirements(formRequirements.name.key)" v-model="formRequirements.name">
             </div>
             <div class="card">
                 <h4>Object obligatoire</h4>
                 <p>Exige la saisie d'un objet dans le formulaire.</p>
-                <input type="checkbox" name="" id="">
+                <input type="checkbox" v-on:click="updateFormRequirements(formRequirements.subject.key)" v-model="formRequirements.subject">
             </div>
             <div class="card">
                 <h4>Adresse e-mail obligatoire</h4>
                 <p>Exige la saisie d'une adresse e-mail dans le formulaire</p>
-                <input type="checkbox" name="" id="">
+                <input type="checkbox" v-on:click="updateFormRequirements(formRequirements.email.key)" v-model="formRequirements.email">
             </div>
             <div class="card">
                 <h4>Numéro de téléphone obligatoire</h4>
                 <p>Exige la saisie d'un numéro de téléphone dans le formulaire.</p>
-                <input type="checkbox" name="" id="">
+                <input type="checkbox" v-on:click="updateFormRequirements(formRequirements.number.key)" v-model="formRequirements.phone">
             </div>
         </div>
     </section>
@@ -115,24 +115,24 @@
         <div class="cards">
             <div class="card card1">
                 <ul>
-                    <li>Model : <strong>SVC (Support Vector Classifier)</strong></li>
-                    <li>Données d'entrainement : <strong>8967</strong></li>
-                    <li>Données de tests : <strong>345</strong> </li>
+                    <!-- <li>Model : <strong>SVC (Support Vector Classifier)</strong></li> -->
+                    <li>Données d'entrainement : <strong>{{ modelInfos.trainingData }}</strong></li>
+                    <li>Données de tests : <strong>{{ modelInfos.testData }}</strong> </li>
                 </ul>
                 <div class="card1-lateral">
                     <ul>
                         <li><span>Performance du modèle</span></li>
-                        <li>Exactitude : <strong>95%</strong></li>
-                        <li>Score F1 :  <strong>95%</strong></li>
-                        <li>Précision : <strong>95%</strong></li>
-                        <li>Rappel : <strong>95%</strong></li>
+                        <li>Exactitude : <strong>{{ modelInfos.modelPerf.exactitude }} </strong> %</li>
+                        <li>Score F1 :  <strong>{{ modelInfos.modelPerf.scoreF1 }} </strong> %</li>
+                        <li>Précision : <strong>{{ modelInfos.modelPerf.precision }} </strong> %</li>
+                        <li>Rappel : <strong>{{ modelInfos.modelPerf.rappel }} </strong> %</li>
                     </ul>
                     <ul>
                         <li><span>Performance du système</span></li>
-                        <li>Exactitude : <strong>98%</strong></li>
-                        <li>Score F1 :  <strong>98%</strong></li>
-                        <li>Précision : <strong>98%</strong></li>
-                        <li>Rappel : <strong>98%</strong></li>
+                        <li>Exactitude : <strong>{{modelInfos.spamshieldPerf.exactitude}} </strong> %</li>
+                        <li>Score F1 :  <strong>{{modelInfos.spamshieldPerf.scoreF1}} </strong> %</li>
+                        <li>Précision : <strong>{{modelInfos.spamshieldPerf.precision}} </strong> %</li>
+                        <li>Rappel : <strong>{{modelInfos.spamshieldPerf.rappel}} </strong> %</li>
                     </ul>
                 </div>
                 <div class="buttons">
@@ -144,8 +144,8 @@
                 <h4>Restaurer une ancienne version du modèle</h4>
                 <p>Saisissez l'identifiant de la version que vous souhaitez restaurer. Vous pouvez retrouver cet identifiant dans MLflow.</p>
                 <fieldset>
-                    <input type="search" name="" id="">
-                    <button>Restaurer</button>
+                    <input type="search" name="" id="input-restaurer-model">
+                    <button v-on:click="restoreOldModel">Restaurer</button>
                 </fieldset>
                 
             </div>
@@ -153,7 +153,7 @@
                 <h4>Réinitialiser le modèle d'IA</h4>
                 <p>Supprimez le modèle actuellement utilisé et revenez à un modèle vierge.</p>
                 <p class="alert">Attention — action irréversible<br>Cette action supprimera définitivement le modèle, son historique, ses données d’entraînement et toutes les améliorations acquises. Aucune donnée ne pourra être récupérée.</p>
-                <button>Réinitialiser</button>
+                <button v-on:click="resetModel">Réinitialiser</button>
             </div>
         </div>
     </section> 
@@ -167,16 +167,39 @@ export default{
     data(){
         return{
             expressions : null,
-            destinataires : null
+            destinataires : null,
+            formRequirements : {
+                name : false,
+                surname : false,
+                email : false,
+                number : false,
+                subject : false
+            },
+            modelInfos:{
+                trainingData : "__",
+                testData : "__",
+                modelPerf : {
+                    exactitude : "__",
+                    scoreF1 : "__",
+                    precision : "__",
+                    rappel : "__",
+                },
+                spamshieldPerf : {
+                    exactitude : "__",
+                    scoreF1 : "__",
+                    precision : "__",
+                    rappel : "__",
+                }
+            }
         }
     },
     methods:{
         // EXPRESSIONS
         getAllExpressions(){
-            axios.get('')
+            axios.get(`/get-regexes`)
             .then(result => {
                 console.log("Expressions réccuperées avec succès")
-                this.expressions = result.data
+                this.expressions = result.data.regex_rules
             })
             .catch(error => {
                 console.error(error)
@@ -188,7 +211,7 @@ export default{
             let data = {
                 pattern : pattern
             }
-            axios.post('', data)
+            axios.post(`/new-regex`, data)
             .then(result => {
                 console.log(result)
                 this.getAllExpressions()
@@ -199,7 +222,7 @@ export default{
         },
 
         supprimerExpression(id){
-            axios.delete(`/${id}`)
+            axios.delete(`/delete-regex/${id}`)
             .then(result => {
                 console.log(result)
                 this.getAllExpressions()
@@ -211,10 +234,10 @@ export default{
 
         // DESTINATAIRES
         getAllDestinataires(){
-            axios.get('')
+            axios.get(`/get-detinataires`)
             .then(result => {
                 console.log("Destinataires réccuperées avec succès")
-                this.destinataires = result.data
+                this.destinataires = result.data.destinataires
             })
             .catch(error => {
                 console.error(error)
@@ -222,11 +245,11 @@ export default{
         },
 
         ajouterDestinataires(){
-            let pattern = document.querySelector('#nouveau-destinataire').value
+            let destinataire = document.querySelector('#nouveau-destinataire').value
             let data = {
-                pattern : pattern
+                destinataire : destinataire
             }
-            axios.post('', data)
+            axios.post(`/new-detinataires`, data)
             .then(result => {
                 console.log(result)
                 this.getAllDestinataires()
@@ -237,7 +260,7 @@ export default{
         },
 
         supprimerDestinataires(id){
-            axios.delete(`/${id}`)
+            axios.delete(`/delete-destinataire/${id}`)
             .then(result => {
                 console.log(result)
                 this.getAllDestinataires()
@@ -248,8 +271,66 @@ export default{
         },
         
         // CHAMPS OBLIGATOIRES DU FORMULAIRE
-
+        getAllFormRequirements(){
+            axios.get(`/get-champs-obligatoires-status`)
+            .then(result => {
+                console.log(result)
+                this.formRequirements = result.data.form_requirements
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        },
+        updateFormRequirements(key){
+            axios.put(`/update-champs-obligatoires-status/${key}`)
+            .then(result => {
+                console.log(result)
+                this.getAllFormRequirements()
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        },
         // MODEL IA
+        getSpamshieldModelInfos(){
+            axios.get(`/get-ai-model-infos`)
+            .then(result => {
+                console.log(result)
+                this.modelInfos = result.data.spamshield_infos
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        },
+
+        restoreOldModel(){
+            let odlModelID = document.querySelector('#input-restaurer-model').value
+            
+            let data = {
+                "odlModelID" : odlModelID
+            }
+            
+            axios.post(`/restore-ai-model`, data)
+            .then(result => {
+                console.log(result)
+                this.getSpamshieldModelInfos()
+            })
+            .catch(error => {
+                console.error(error)
+            })
+
+        },
+        resetModel(){
+            axios.get(`/reset-ai-model`)
+            .then(result => {
+                console.log(result)
+                this.getSpamshieldModelInfos()
+            })
+            .catch(error => {
+                console.error(error)
+            })
+
+        }
     }
 }
  
