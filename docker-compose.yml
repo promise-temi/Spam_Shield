@@ -1,28 +1,28 @@
 services:
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    ports:
-      - "8000:8000"
-    depends_on:
-      - postgres
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.api
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     - postgres
 
-  scheduler:
-    build:
-      context: .
-      dockerfile: Dockerfile.scheduler
-    ports:
-      - "8080:8080"
+  # scheduler:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.scheduler
+  #   ports:
+  #     - "8080:8080"
 
   postgres:
     image: postgres:17
     environment:
-      POSTGRES_DB: 
-      POSTGRES_USER: 
-      POSTGRES_PASSWORD: 
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:  
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -58,6 +58,6 @@ services:
 
 volumes:
   postgres_data:
+  mlflow_data:
   prometheus_data:
   grafana_data:
-  mlflow_data:

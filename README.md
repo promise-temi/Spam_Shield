@@ -128,3 +128,14 @@ Déploiement
 
 
 Il peut arriver que fast api ne se lance pas simplement parce que la base de donnée ne marche pas. C'est une erreur vicieuse
+
+python -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+
+
+
+
+
+uvicorn backend.api:app --reload

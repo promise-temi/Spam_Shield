@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 import os 
 import sys
@@ -9,7 +10,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],          # autorise toutes les origines (localhost, 127.0.0.1, etc.)
+    allow_origins=["http://localhost:5173"], # autorise toutes les origines (localhost, 127.0.0.1, etc.)
     allow_credentials=True,
     allow_methods=["*"],          # GET, POST, PUT, DELETE
     allow_headers=["*"],          # Autorise tous les headers
@@ -176,11 +177,12 @@ def get_detinataires()->dict:
     }
     return JSONResponse(status_code=200, content=response_data)
 
+class DestinataireRequest(BaseModel):
+    destinataire: str
 @app.post("/new-detinataires")
-async def new_detinataires(request: Request):
+async def new_detinataires(data: DestinataireRequest):
     """Ajoute un destinataire"""
-    data = await request.json()
-    destinataire = data['destinataire']
+    destinataire = data.destinataire
     Postgres_DB().add_prospect_mail([destinataire])
     return JSONResponse(status_code=200, content={"message":"ok"})
 

@@ -29,6 +29,7 @@ class Postgres_DB:
             
         except Exception as e:
             logging.error(f"La connexion à la base Postgres à échouée : \n {e}")
+            raise e
 
 
     def _create_tables_if_not_exist(self):

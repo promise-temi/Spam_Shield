@@ -22,7 +22,6 @@ mlflow
 
 psycopg2
 
-smtplib
 
 cryptography
 
