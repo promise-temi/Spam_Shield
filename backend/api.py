@@ -27,7 +27,7 @@ from modules.Database import Postgres_DB
 # from modules.SpamshieldReport import spamshielReport
 from modules.ML_Flow import ML_Flow_Operations
 from modules.SpamShield_Operations import SpamShield_Operations
-
+from modules.Model import Model
 
 # -- ROUTES TABLEAU DE BORD --
 app.get('dashbord-metrics-and-graphs')
@@ -118,10 +118,12 @@ def get_message_and_related_metrics(selected_message_id:int)->dict:
 
 # -- ROUTES BANC DE TESTS --
 
+class NewMessageRequest(BaseModel):
+    message_and_data : object
 @app.post("/new-message")
-async def new_message(request: Request):
+async def new_message(data: NewMessageRequest):
     """Depuis un formulaire d'un site externe appartenant a l'utilisateur fait l'ingestion d'un nouveau message"""
-    data = await request.json()
+    data = data.message_and_data
     message = {'text' : data['message']}
     metadata = data['metadata']
     SpamShield_Operations().New_Message(message, metadata)
@@ -139,28 +141,31 @@ def get_regexes()->dict:
            "regexes" : List 
         }
     """
-    regex_rules = Postgres_DB().get_all_regex_rules()
+    regex_rules = SpamShield_Operations().Get_All_Regex_Rules()
     response_data = {
         "regex_rules" : regex_rules
     }
     return JSONResponse(status_code=200, content=response_data)
 
     
-
-
+class RegexRequest(BaseModel):
+    pattern : str
 @app.post("/new-regex")
-async def new_regex(request: Request):
+async def new_regex(data: RegexRequest):
     """Ajoute un expression régulieres interdite"""
-    data = await request.json()
-    pattern = data['pattern']
-    Postgres_DB().add_regex_rule(pattern)
+    pattern = data.pattern
+    SpamShield_Operations().Add_Regex_Rule(pattern)
     return JSONResponse(status_code=200, content={"message":"ok"})
 
 @app.delete("/delete-regex/{id}")
 async def delete_regex(id:int):
     """Supprime une expression régulieres interdite"""
-    Postgres_DB().delete_regex_rule(id)
+    SpamShield_Operations().Delete_Regex_Rule(id)
     return JSONResponse(status_code=200, content={"message":"ok"})
+
+
+
+
 
 @app.get("/get-detinataires")
 def get_detinataires()->dict:
@@ -171,7 +176,7 @@ def get_detinataires()->dict:
            "destinataires" : List 
         }
     """
-    destinataires = Postgres_DB().get_prospect_mail_front()
+    destinataires = SpamShield_Operations().Get_All_Destinataires()
     response_data = {
         "destinataires" : destinataires
     }
@@ -183,13 +188,13 @@ class DestinataireRequest(BaseModel):
 async def new_detinataires(data: DestinataireRequest):
     """Ajoute un destinataire"""
     destinataire = data.destinataire
-    Postgres_DB().add_prospect_mail([destinataire])
+    SpamShield_Operations().Add_Destinataire(destinataire)
     return JSONResponse(status_code=200, content={"message":"ok"})
 
 @app.delete("/delete-destinataire/{id}")
 def delete_destinataire(id:int):
     """Supprime un destinataire"""
-    Postgres_DB().delete_prospect_mail([id])
+    SpamShield_Operations().Delete_Destinataire(id)
     return JSONResponse(status_code=200, content={"message":"ok"})
 
 # @app.get("/get-champs-obligatoires-status")
@@ -212,7 +217,7 @@ def delete_destinataire(id:int):
 #     return JSONResponse(status_code=200, content=response_data)
     
 
-@app.put("/update-champs-obligatoires-status/{key}")
+# @app.put("/update-champs-obligatoires-status/{key}")
 # def update_champs_obligatoire_status(key:str):
 #     """met à jour le status des champs obligatoires"""
 #     JsonStockage().edit_form_requirements(key)
@@ -236,7 +241,8 @@ def delete_destinataire(id:int):
 #     ML_Flow_Operations().restore_previous_model(previous_model_id)
 #     return JSONResponse(status_code=200, content={"message":"ok"})
 
-@app.get("/reset-ai-model")
+@app.get("/build_virgin_model")
 def reset_ai_model():
-    """Reintilise le modèle d'ia et supprime toutes les donnée."""
+    """Reintilise le modèle d'ia et supprime toutes les données. Sert d'initialisation si aucun modèle existe"""
+    SpamShield_Operations().virgin_model()
     return JSONResponse(status_code=200, content={"message":"ok"}) 

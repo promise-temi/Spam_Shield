@@ -7,7 +7,9 @@ from Model import Model
 from Business_Rules import Business_Rules
 from Mail_Operations import Mail_Operations
 from Database import Postgres_DB
-
+from Model import Model
+from Set_SpamShield import SET_Spam_Shield_Dependances
+from NLP_Feat_Eng import NLP_Feat_Eng
 
 
 class SpamShield_Operations():
@@ -90,14 +92,39 @@ class SpamShield_Operations():
         Postgres_DB().delete_all_messages()
         logging.info("Tous les messages ont été supprimés avec succès de la base de données.")
 
+    # DESTINATAIRES
+    def Get_All_Destinataires(self):
+        destinataires = Postgres_DB().get_prospect_mail_front()
+        logging.info('Les destinataires ont été réccupérés avec succès')
+        return destinataires
+
+    def Add_Destinataire(self, prospect:str):
+        Postgres_DB().add_prospect_mail([prospect])
+        logging.info(f"Le destinataire '{prospect}' a été ajoutée avec succès.")
+
+    def Delete_Destinataire(self, id:int):
+        Postgres_DB().delete_prospect_mail([id])
+        logging.info(f"Le destinataire regex avec l'ID '{id}' a été supprimée avec succès.")    
+
+
+    # REGEX
+    def Get_All_Regex_Rules(self):
+        regex_rules = Postgres_DB().get_all_regex_rules()
+        return regex_rules
 
     def Add_Regex_Rule(self, pattern:str):
         Postgres_DB().add_regex_rule(pattern)
         logging.info(f"La règle regex '{pattern}' a été ajoutée avec succès.")
 
-    def Delete_Regex_rule(self, id:int):
+    def Delete_Regex_Rule(self, id:int):
         Postgres_DB().delete_regex_rule(id)
         logging.info(f"La règle regex avec l'ID '{id}' a été supprimée avec succès.")
+
+    # MODEL
+    def virgin_model(self):
+        df_messages = SET_Spam_Shield_Dependances(raw_data_dir="modules/data/raw_data").Dependances_Full_Pipeline(lang='fr')
+        model_ = Model()
+        model_.AI_full_virgin_model_training_pipeline(df_messages, "backend/modules/data/corpus.parquet", "backend/modules/data")
         
 
 

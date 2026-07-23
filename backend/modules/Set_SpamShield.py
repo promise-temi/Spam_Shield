@@ -1,6 +1,9 @@
 import pandas as pd
 import os
 import logging
+import kagglehub
+from kagglehub import KaggleDatasetAdapter
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
@@ -18,8 +21,8 @@ class SET_Spam_Shield_Dependances:
         Retourne un dataframe apres avoir réccupéré les données dont le projet a besoin
         """
         logging.info('Début du téléchargement des données')
+        self.download_all_data()
         self.Multiligual_Spam_Dataset()
-        self.Phishing_Email_Dataset()
         self.Professionnal_mails_fr()
         self.SMS_spam_detection_multilingual()
         logging.info('Fin du téléchargement des données')
@@ -31,6 +34,13 @@ class SET_Spam_Shield_Dependances:
     def __create_dir_if_not_exist(self, output_dir):
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
+
+
+
+
+    def download_all_data(self):
+        pass
+
 
 
 
