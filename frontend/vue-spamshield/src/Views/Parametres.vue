@@ -161,7 +161,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api from "../axios/axios.js";
 
 export default{
     data(){
@@ -196,7 +196,7 @@ export default{
     methods:{
         // EXPRESSIONS
         getAllExpressions(){
-            axios.get(`/get-regexes`)
+            api.get(`/get-regexes`)
             .then(result => {
                 console.log("Expressions réccuperées avec succès")
                 this.expressions = result.data.regex_rules
@@ -211,7 +211,7 @@ export default{
             let data = {
                 pattern : pattern
             }
-            axios.post(`/new-regex`, data)
+            api.post(`/new-regex`, data)
             .then(result => {
                 console.log(result)
                 this.getAllExpressions()
@@ -222,7 +222,7 @@ export default{
         },
 
         supprimerExpression(id){
-            axios.delete(`/delete-regex/${id}`)
+            api.delete(`/delete-regex/${id}`)
             .then(result => {
                 console.log(result)
                 this.getAllExpressions()
@@ -234,7 +234,7 @@ export default{
 
         // DESTINATAIRES
         getAllDestinataires(){
-            axios.get(`/get-detinataires`)
+            api.get(`/get-detinataires`)
             .then(result => {
                 console.log("Destinataires réccuperées avec succès")
                 this.destinataires = result.data.destinataires
@@ -249,7 +249,7 @@ export default{
             let data = {
                 destinataire : destinataire
             }
-            axios.post(`/new-detinataires`, data)
+            api.post(`/new-detinataires`, data)
             .then(result => {
                 console.log(result)
                 this.getAllDestinataires()
@@ -260,7 +260,7 @@ export default{
         },
 
         supprimerDestinataires(id){
-            axios.delete(`/delete-destinataire/${id}`)
+            api.delete(`/delete-destinataire/${id}`)
             .then(result => {
                 console.log(result)
                 this.getAllDestinataires()
@@ -272,7 +272,7 @@ export default{
         
         // CHAMPS OBLIGATOIRES DU FORMULAIRE
         getAllFormRequirements(){
-            axios.get(`/get-champs-obligatoires-status`)
+            api.get(`/get-champs-obligatoires-status`)
             .then(result => {
                 console.log(result)
                 this.formRequirements = result.data.form_requirements
@@ -282,7 +282,7 @@ export default{
             })
         },
         updateFormRequirements(key){
-            axios.put(`/update-champs-obligatoires-status/${key}`)
+            api.put(`/update-champs-obligatoires-status/${key}`)
             .then(result => {
                 console.log(result)
                 this.getAllFormRequirements()
@@ -293,7 +293,7 @@ export default{
         },
         // MODEL IA
         getSpamshieldModelInfos(){
-            axios.get(`/get-ai-model-infos`)
+            api.get(`/get-ai-model-infos`)
             .then(result => {
                 console.log(result)
                 this.modelInfos = result.data.spamshield_infos
@@ -310,7 +310,7 @@ export default{
                 "odlModelID" : odlModelID
             }
             
-            axios.post(`/restore-ai-model`, data)
+            api.post(`/restore-ai-model`, data)
             .then(result => {
                 console.log(result)
                 this.getSpamshieldModelInfos()
@@ -321,7 +321,7 @@ export default{
 
         },
         resetModel(){
-            axios.get(`/reset-ai-model`)
+            api.get(`/reset-ai-model`)
             .then(result => {
                 console.log(result)
                 this.getSpamshieldModelInfos()
@@ -331,6 +331,12 @@ export default{
             })
 
         }
+    },
+    mounted(){
+        this.getAllExpressions()
+        this.getAllDestinataires()
+        // this.getAllFormRequirements()
+        // this.getSpamshieldModelInfos()
     }
 }
  

@@ -1,10 +1,19 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 import os 
 import sys
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],          # autorise toutes les origines (localhost, 127.0.0.1, etc.)
+    allow_credentials=True,
+    allow_methods=["*"],          # GET, POST, PUT, DELETE
+    allow_headers=["*"],          # Autorise tous les headers
+)
 
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -13,8 +22,8 @@ Instrumentator().instrument(app).expose(app)
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from modules.Database import Postgres_DB
-from modules.Database import JsonStockage
-from modules.SpamshieldReport import spamshielReport
+# from modules.Database import JsonStockage
+# from modules.SpamshieldReport import spamshielReport
 from modules.ML_Flow import ML_Flow_Operations
 from modules.SpamShield_Operations import SpamShield_Operations
 
@@ -161,7 +170,7 @@ def get_detinataires()->dict:
            "destinataires" : List 
         }
     """
-    destinataires = Postgres_DB().get_prospect_mail()
+    destinataires = Postgres_DB().get_prospect_mail_front()
     response_data = {
         "destinataires" : destinataires
     }
@@ -181,51 +190,51 @@ def delete_destinataire(id:int):
     Postgres_DB().delete_prospect_mail([id])
     return JSONResponse(status_code=200, content={"message":"ok"})
 
-@app.get("/get-champs-obligatoires-status")
-def get_champs_obligatoire_status():
-    """
-    Récupère le status des champs obligatoires
+# @app.get("/get-champs-obligatoires-status")
+# def get_champs_obligatoire_status():
+#     """
+#     Récupère le status des champs obligatoires
 
-    Returns : {
-        "nom" : Boolean,
-        "Prenom" : Boolean,
-        "Objet" : Boolean,
-        "Email" : Boolean,
-        "Telephone" : Boolean,  
-    }
-    """
-    form_requirements = JsonStockage().get_form_requirements()
-    response_data = {
-        "form_requirements" : form_requirements
-    }
-    return JSONResponse(status_code=200, content=response_data)
+#     Returns : {
+#         "nom" : Boolean,
+#         "Prenom" : Boolean,
+#         "Objet" : Boolean,
+#         "Email" : Boolean,
+#         "Telephone" : Boolean,  
+#     }
+#     """
+#     form_requirements = JsonStockage().get_form_requirements()
+#     response_data = {
+#         "form_requirements" : form_requirements
+#     }
+#     return JSONResponse(status_code=200, content=response_data)
     
 
 @app.put("/update-champs-obligatoires-status/{key}")
-def update_champs_obligatoire_status(key:str):
-    """met à jour le status des champs obligatoires"""
-    JsonStockage().edit_form_requirements(key)
-    return JSONResponse(status_code=200, content={"message":"ok"})
+# def update_champs_obligatoire_status(key:str):
+#     """met à jour le status des champs obligatoires"""
+#     JsonStockage().edit_form_requirements(key)
+#     return JSONResponse(status_code=200, content={"message":"ok"})
 
-@app.get("/get-ai-model-infos")
-def get_ai_model_infos()->dict:
-    """Réccupère les informations associée au modele d'IA"""
-    spamshield_infos = spamshielReport.model_and_system_report_infos()
-    response_data = {
-       "spamshield_infos":spamshield_infos,
-    }
-    return JSONResponse(status_code=200, content=response_data)
+# @app.get("/get-ai-model-infos")
+# def get_ai_model_infos()->dict:
+#     """Réccupère les informations associée au modele d'IA"""
+#     spamshield_infos = spamshielReport.model_and_system_report_infos()
+#     response_data = {
+#        "spamshield_infos":spamshield_infos,
+#     }
+#     return JSONResponse(status_code=200, content=response_data)
     
 
-@app.post("/restore-ai-model")
-async def restore_ai_model(request: Request):
-    """Reccupere un précédent model d'IA souhaité."""
-    data = await request.json()
-    previous_model_id = data['odlModelID']
-    ML_Flow_Operations().restore_previous_model(previous_model_id)
-    return JSONResponse(status_code=200, content={"message":"ok"})
+# @app.post("/restore-ai-model")
+# async def restore_ai_model(request: Request):
+#     """Reccupere un précédent model d'IA souhaité."""
+#     data = await request.json()
+#     previous_model_id = data['odlModelID']
+#     ML_Flow_Operations().restore_previous_model(previous_model_id)
+#     return JSONResponse(status_code=200, content={"message":"ok"})
 
-app.get("/reset-ai-model")
+@app.get("/reset-ai-model")
 def reset_ai_model():
     """Reintilise le modèle d'ia et supprime toutes les donnée."""
-    return JSONResponse(status_code=200, content={"message":"ok"})
+    return JSONResponse(status_code=200, content={"message":"ok"}) 

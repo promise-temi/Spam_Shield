@@ -30,3 +30,4 @@ asyncio
 fastapi
 uvicorn
 python-multipart
+prometheus_fastapi_instrumentator

@@ -11,9 +11,10 @@ from Secure import Security
 
 
 class Postgres_DB:
-    def __init__(self, sql_file_path=""):
+    def __init__(self, sql_file_path=f"{os.path.dirname(__file__)}/data/db.sql"):
         self.sql_file_path = sql_file_path
         self._connect()
+        self._create_tables_if_not_exist()
         self.security_tools = Security()
 
     def _connect(self):
@@ -25,11 +26,12 @@ class Postgres_DB:
                 password = os.getenv("DB_PASSWORD"), 
                 port = os.getenv("DB_PORT"))
             logging.info("Connexion à la base Postgres réussie")
+            
         except Exception as e:
             logging.error(f"La connexion à la base Postgres à échouée : \n {e}")
 
 
-    def create_tables_if_not_exist(self):
+    def _create_tables_if_not_exist(self):
         try:
             with open(self.sql_file_path, "r") as f:
                 sql_script = f.read()
@@ -38,8 +40,11 @@ class Postgres_DB:
             self.conn.commit()
             cur.close()
             logging.info("Tables crées avec succès ou déja existantes")
+        except FileNotFoundError as e:
+            logging.error(f"Une erreur s'est produite lors de la création des tables dans la BDD : \n {e}")
         except Exception as e:
             logging.error(f"Une erreur s'est produite lors de la création des tables dans la BDD : \n {e}")
+
 
     def add_prospect_mail(self, mails:list[str]):
         cur = self.conn.cursor()
@@ -61,17 +66,32 @@ class Postgres_DB:
                 cur.execute("DELETE FROM Prospects_mails WHERE id = (%s);", (mail_id,))
             except Exception as e:
                 logging.error(f"Une erreur s'est produite pendant la supression mail : {e}")
-            
-    def get_prospect_mail(self, query)-> list:
+        self.conn.commit()
+        cur.close()
+        
+    def get_prospect_mail(self, query="*")-> list:
        cur = self.conn.cursor()
        try:
-        cur.execute(f"SELECT {query} FROM Prospects_mails")
+        cur.execute(f"SELECT email FROM Prospects_mails")
         rows = cur.fetchall()
         logging.debug(rows)
         decrypted_prospect_mails = [self.security_tools.decrypt_(row[0]) for row in rows]
         return [mail for mail in decrypted_prospect_mails]
        except Exception as e:
                 logging.error(f"Une erreur s'est produite pendant la reccupération des mails : {e}")
+
+    def get_prospect_mail_front(self, query="*") -> list:
+        cur = self.conn.cursor()
+        try:
+            cur.execute("SELECT id, email FROM Prospects_mails")
+            rows = cur.fetchall()
+            decrypted = [
+                {"id": row[0], "email": self.security_tools.decrypt_(row[1])}
+                for row in rows
+            ]
+            return decrypted
+        except Exception as e:
+            logging.error(f"Erreur récupération mails : {e}")
 
     def check_if_mail_exist(self, new_mail):
         old_mails = self.get_prospect_mail('email')
@@ -214,7 +234,11 @@ class Postgres_DB:
 
     def get_all_regex_rules(self):
         cur = self.conn.cursor()
-        cur.execute("SELECT id, pattern FROM regexes")
+        try:
+            cur.execute("SELECT id, pattern FROM regexes")
+        except Exception as e:
+            print("ERREUR SQL :", e)
+            self.conn.rollback()
         rows = cur.fetchall()
         regex_rules = []
         for row in rows:
@@ -227,14 +251,23 @@ class Postgres_DB:
     
     def add_regex_rule(self, pattern:str):
         cur = self.conn.cursor()
-        cur.execute("INSERT INTO regexes (pattern) VALUES (%s);", (pattern,))
+        try:
+            cur.execute("INSERT INTO regexes (pattern) VALUES (%s);", (pattern,))
+        except Exception as e:
+            print("ERREUR SQL :", e)
+            self.conn.rollback()
         self.conn.commit()
         cur.close()
         logging.info(f"La règle regex '{pattern}' a été ajoutée à la base de données.")
 
+
     def delete_regex_rule(self, id:int):
         cur = self.conn.cursor()
-        cur.execute("DELETE FROM regexes WHERE id = (%s);", (id,))
+        try:
+            cur.execute("DELETE FROM regexes WHERE id = (%s);", (id,))
+        except Exception as e:
+            print("ERREUR SQL :", e)
+            self.conn.rollback()
         self.conn.commit()
         cur.close()
         logging.info(f"La règle regex avec l'ID '{id}' a été supprimée de la base de données.")

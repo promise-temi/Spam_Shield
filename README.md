@@ -1,6 +1,7 @@
 # Spam_Shield
 Outil anti-abus évolutif - RNCP37827 Développeur en Intélligence Artificielle
 
+uvicorn backend.api:app --reload             
 
 command : mlflow ui
 http://127.0.0.1:5000
@@ -123,3 +124,7 @@ Réentraînement
           ↓
 
 Déploiement
+
+
+
+Il peut arriver que fast api ne se lance pas simplement parce que la base de donnée ne marche pas. C'est une erreur vicieuse
