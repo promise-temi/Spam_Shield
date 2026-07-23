@@ -69,7 +69,7 @@ class Postgres_DB:
                 logging.error(f"Une erreur s'est produite pendant la supression mail : {e}")
         self.conn.commit()
         cur.close()
-        
+
     def get_prospect_mail(self, query="*")-> list:
        cur = self.conn.cursor()
        try:
@@ -104,12 +104,7 @@ class Postgres_DB:
         logging.info('Nouveau mail détecté')
         return False
     
-    def select_metadata_value(self, metadata_item_name):
-        cur = self.conn.cursor()
-        cur.execute("SELECT is_mandatory FROM metadata_options WHERE option_name = (%s);", (metadata_item_name,))
-        data = cur.fetchone()
-        logging.debug(data)
-        return data
+
 
     def get_regexes_patterns(self):
         cur = self.conn.cursor()
@@ -122,7 +117,7 @@ class Postgres_DB:
         except Exception as e:
                     logging.error(f"Une erreur s'est produite pendant la reccupération des regexes : {e}")
 
-    def save_message(self, pred_text, raw_text, metadata, banned_patterns_found, model_pred, model_confidence, business_rules_label, final_label):
+    def save_message(self, pred_text, raw_text, metadata, banned_patterns_found, model_pred, model_confidence, business_rules_label, final_label, is_overridden):
         cur = self.conn.cursor()
         cur.execute(f"""INSERT INTO messages 
                     (preprocessed_text, 
@@ -132,7 +127,8 @@ class Postgres_DB:
                     model_confidence,
                     business_rules_label, 
                     final_label,
-                    banned_patterns_found) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);""",
+                    banned_patterns_found,
+                    is_overridden) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);""",
                     (pred_text,
                      self.security_tools.encrypt_(raw_text), 
                      self.security_tools.encrypt_(json.dumps(metadata)), 
@@ -140,7 +136,8 @@ class Postgres_DB:
                      model_confidence,
                      business_rules_label, 
                      final_label,
-                     banned_patterns_found,))
+                     banned_patterns_found,
+                     is_overridden,))
         self.conn.commit()
         cur.close()
         logging.info("Message enregistré avec succès dans la bdd")
@@ -284,4 +281,4 @@ class Postgres_DB:
         logging.info(f"Le label du message avec l'ID '{id}' a été mis à jour avec succès.")
 
     def get_all_messages(self):
-        cur = self.conn.cur
+        pass

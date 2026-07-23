@@ -68,3 +68,31 @@ class ML_Flow_Operations:
             pass
 
         logging.info(f"Tous les modèles et artefacts liés à '{model_name}' ont été supprimés.")
+
+        
+    from mlflow.tracking import MlflowClient
+
+    def get_latest_model_metrics(self):
+        client = MlflowClient()
+
+        # Récupère tous les modèles enregistrés
+        models = client.search_registered_models()
+
+        # Trie par date de mise à jour
+        models = sorted(models, key=lambda m: m.last_updated_timestamp, reverse=True)
+
+        # Le dernier modèle
+        latest_model = models[0]
+        latest_model_name = latest_model.name
+
+        # Récupère la dernière version du modèle
+        versions = client.search_model_versions(f"name='{latest_model_name}'")
+        versions = sorted(versions, key=lambda v: v.last_updated_timestamp, reverse=True)
+        latest_version = versions[0]
+
+        run_id = latest_version.run_id
+        run = client.get_run(run_id)
+
+        # Toutes les métriques du run → déjà un dictionnaire
+        return run.data.metrics
+

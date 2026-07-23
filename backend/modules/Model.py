@@ -32,6 +32,7 @@ class Model:
         self.model_name = model_name
         self.metadata = metadata
         self.seuil_confiance = seuil_confiance
+        self.override = False
 
     def build_virgin_model_pipeline(self, X_train, X_test, y_train, y_test):
         """Cette méthode exécute l'ensemble du pipeline de construction d'un modèle vierge.
@@ -156,6 +157,7 @@ class Model:
         self.get_confidence(model, X)
         if self.seuil_confiance:
             final_pred = self.confidence_based_pred(y_pred, self.confidence_score)
+            self.override = True
             return final_pred
         else:
             return y_pred

@@ -20,11 +20,13 @@ CREATE TABLE IF NOT EXISTS messages (
     model_confidence FLOAT DEFAULT 0.0,
     business_rules_label BOOLEAN DEFAULT FALSE,
     final_label BOOLEAN DEFAULT FALSE,
-    is_edited BOOLEAN DEFAULT FALSE,
+    is_corected BOOLEAN DEFAULT FALSE,
+    is_overridden BOOLEAN DEFAULT FALSE,
     edition_counter INT DEFAULT 0,
     banned_patterns_found TEXT[],
-    period_id INT REFERENCES periods(id) ON DELETE SET NULL
-    
+    period_id INT REFERENCES periods(id) ON DELETE SET NULL,
+    receaved BOOLEAN DEFAULT FALSE,
+    consulted BOOLEAN DEFAULT FALSE
 );
 
 

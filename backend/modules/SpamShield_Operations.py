@@ -2,6 +2,7 @@ import sys
 import os
 import pandas as pd
 import logging
+import json
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from Model import Model
 from Business_Rules import Business_Rules
@@ -10,6 +11,7 @@ from Database import Postgres_DB
 from Model import Model
 from Set_SpamShield import SET_Spam_Shield_Dependances
 from NLP_Feat_Eng import NLP_Feat_Eng
+from ML_Flow import ML_Flow_Operations
 
 
 class SpamShield_Operations():
@@ -68,7 +70,9 @@ class SpamShield_Operations():
                                    model_pred=bool(prediction_model[0]),
                                    model_confidence=model.confidence_score,
                                    business_rules_label=bool(prediction_business_rules),
-                                   final_label=bool(final_label))
+                                   final_label=bool(final_label),
+                                   is_overridden=model.override)
+                                   
         
         
     
@@ -122,10 +126,36 @@ class SpamShield_Operations():
 
     # MODEL
     def virgin_model(self):
-        df_messages = SET_Spam_Shield_Dependances(raw_data_dir="modules/data/raw_data").Dependances_Full_Pipeline(lang='fr')
-        model_ = Model()
-        model_.AI_full_virgin_model_training_pipeline(df_messages, "backend/modules/data/corpus.parquet", "backend/modules/data")
+        Model().AI_full_virgin_model_training_pipeline()
+
+    def Current_Model_Metrics(self):
+        metrics = ML_Flow_Operations().get_latest_model_metrics()
+        return metrics
         
+    # FORM
+    def Form_Requirements(self):
+        path = f"{os.path.dirname(__file__)}/data/required_metadata.json"
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+        
+    def Update_Form_Requirements(self, key: str):
+        path = f"{os.path.dirname(__file__)}/data/required_metadata.json"
+
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        if key not in data:
+            raise KeyError(f"Clé inconnue : {key}")
+
+        data[key] = not data[key]
+
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
+
+
+
+
+
 
 
     

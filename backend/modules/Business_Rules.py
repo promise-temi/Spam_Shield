@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from Markov_Model import MarkovGibberishDetector
 from NLP_Feat_Eng import NLP_Feat_Eng
 from Database import Postgres_DB
-
+import json
 
 class Business_Rules:
     def __init__(self, min_lenght_message:int=5, max_lenght_message:int=50_000):
@@ -16,12 +16,15 @@ class Business_Rules:
         self.max_size_message = max_lenght_message
         db = Postgres_DB()
         self.patterns = db.get_regexes_patterns() 
-        self.name_presence = db.select_metadata_value('name')
-        self.surname_presence = db.select_metadata_value('surname')
-        self.email_presence = db.select_metadata_value('email')
-        self.phone_presence = db.select_metadata_value('phone')
-        self.subject_presence = db.select_metadata_value('subject')
-        self.gibberish_presence = db.select_metadata_value('gibberish')
+        
+        with open(f"{os.path.dirname(__file__)}/data/required_metadata.json", "r", encoding="utf-8") as f:
+            self.metadata_values = json.load(f)
+        self.name_presence = self.metadata_values['name']
+        self.surname_presence = self.metadata_values['surname']
+        self.email_presence = self.metadata_values['email']
+        self.phone_presence = self.metadata_values['phone']
+        self.subject_presence = self.metadata_values['subject']
+        self.gibberish_presence = self.metadata_values['gibberish']
         self.detector = MarkovGibberishDetector()
         
 
@@ -55,10 +58,11 @@ class Business_Rules:
 
 
     def banned_patterns(self, text:str):
-        for pattern in self.patterns:
-            banned_pattern = re.match(fr"{pattern}", text)
-            if banned_pattern:
-                self.banned_patterns_found.append(f"Contient pattern interdit : {pattern}.")
+        if len(self.patterns) >= 1:
+            for pattern in self.patterns:
+                banned_pattern = re.match(fr"{pattern}", text)
+                if banned_pattern:
+                    self.banned_patterns_found.append(f"Contient pattern interdit : {pattern}.")
 
 
 
@@ -70,6 +74,7 @@ class Business_Rules:
             return 0 #ham
 
     def metadata_rules_pipeline(self, metadata:object):
+        print(metadata)
         self.check_name(metadata['name'])
         self.check_surname(metadata['surname'])
         self.check_email(metadata['email'])

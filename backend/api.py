@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import pandas as pd
 
 import os 
 import sys
@@ -118,16 +119,39 @@ def get_message_and_related_metrics(selected_message_id:int)->dict:
 
 # -- ROUTES BANC DE TESTS --
 
+class Metadata(BaseModel):
+    name: str
+    surname: str
+    email: str
+    phone: str
+    subject: str
+    form_id: str
+
+class Settings(BaseModel):
+    entrainementModel: bool
+    recevoirParMail: bool
+
 class NewMessageRequest(BaseModel):
-    message_and_data : object
+    message: str
+    metadata: Metadata
+    settings: Settings
+
 @app.post("/new-message")
-async def new_message(data: NewMessageRequest):
-    """Depuis un formulaire d'un site externe appartenant a l'utilisateur fait l'ingestion d'un nouveau message"""
-    data = data.message_and_data
-    message = {'text' : data['message']}
-    metadata = data['metadata']
+async def new_message(newMessage: NewMessageRequest):
+
+    # Message dans un DataFrame
+    message = pd.DataFrame([{'text': newMessage.message}])
+
+    # Metadata converti en dict
+    metadata = newMessage.metadata.dict()
+
+    # Settings converti en dict (si tu l'utilises)
+    settings = newMessage.settings.dict()
+
     SpamShield_Operations().New_Message(message, metadata)
-    return JSONResponse(status_code=200, content={"message":"ok"})
+
+    return JSONResponse(status_code=200, content={"message": "ok"})
+
 
 # -- ROUTES PARAMETRES --
 
@@ -197,49 +221,43 @@ def delete_destinataire(id:int):
     SpamShield_Operations().Delete_Destinataire(id)
     return JSONResponse(status_code=200, content={"message":"ok"})
 
-# @app.get("/get-champs-obligatoires-status")
-# def get_champs_obligatoire_status():
-#     """
-#     Récupère le status des champs obligatoires
+@app.get("/get-champs-obligatoires-status")
+def get_champs_obligatoire_status():
+    """
+    Récupère le status des champs obligatoires
 
-#     Returns : {
-#         "nom" : Boolean,
-#         "Prenom" : Boolean,
-#         "Objet" : Boolean,
-#         "Email" : Boolean,
-#         "Telephone" : Boolean,  
-#     }
-#     """
-#     form_requirements = JsonStockage().get_form_requirements()
-#     response_data = {
-#         "form_requirements" : form_requirements
-#     }
-#     return JSONResponse(status_code=200, content=response_data)
+    Returns : {
+        "nom" : Boolean,
+        "Prenom" : Boolean,
+        "Objet" : Boolean,
+        "Email" : Boolean,
+        "Telephone" : Boolean,  
+    }
+    """
+    form_requirements = SpamShield_Operations().Form_Requirements()
+    response_data = {
+        "form_requirements" : form_requirements
+    }
+    return JSONResponse(status_code=200, content=response_data)
     
 
-# @app.put("/update-champs-obligatoires-status/{key}")
-# def update_champs_obligatoire_status(key:str):
-#     """met à jour le status des champs obligatoires"""
-#     JsonStockage().edit_form_requirements(key)
-#     return JSONResponse(status_code=200, content={"message":"ok"})
+@app.put("/update-champs-obligatoires-status/{key}")
+def update_champs_obligatoire_status(key:str):
+    """met à jour le status des champs obligatoires"""
+    SpamShield_Operations().Update_Form_Requirements(key)
+    return JSONResponse(status_code=200, content={"message":"ok"})
 
-# @app.get("/get-ai-model-infos")
-# def get_ai_model_infos()->dict:
-#     """Réccupère les informations associée au modele d'IA"""
-#     spamshield_infos = spamshielReport.model_and_system_report_infos()
-#     response_data = {
-#        "spamshield_infos":spamshield_infos,
-#     }
-#     return JSONResponse(status_code=200, content=response_data)
+@app.get("/get-ai-model-infos")
+def get_ai_model_infos()->dict:
+    """Réccupère les informations associée au modele d'IA"""
+    spamshield_infos = SpamShield_Operations().Current_Model_Metrics()
+    response_data = {
+       "spamshield_infos":spamshield_infos,
+    }
+    return JSONResponse(status_code=200, content=response_data)
     
 
-# @app.post("/restore-ai-model")
-# async def restore_ai_model(request: Request):
-#     """Reccupere un précédent model d'IA souhaité."""
-#     data = await request.json()
-#     previous_model_id = data['odlModelID']
-#     ML_Flow_Operations().restore_previous_model(previous_model_id)
-#     return JSONResponse(status_code=200, content={"message":"ok"})
+
 
 @app.get("/build_virgin_model")
 def reset_ai_model():

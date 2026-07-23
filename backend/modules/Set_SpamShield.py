@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import logging
 import kagglehub
-from kagglehub import KaggleDatasetAdapter
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -21,7 +21,6 @@ class SET_Spam_Shield_Dependances:
         Retourne un dataframe apres avoir réccupéré les données dont le projet a besoin
         """
         logging.info('Début du téléchargement des données')
-        self.download_all_data()
         self.Multiligual_Spam_Dataset()
         self.Professionnal_mails_fr()
         self.SMS_spam_detection_multilingual()
@@ -38,15 +37,17 @@ class SET_Spam_Shield_Dependances:
 
 
 
-    def download_all_data(self):
-        pass
 
+        
 
 
 
     def Multiligual_Spam_Dataset(self):
         # telechargement initial du dataset
         output_dir = f"{self.raw_data_dir}/multiligual_spam_dataset"
+        kagglehub.dataset_download("rajnathpatel/multilingual-spam-data", output_dir=output_dir)
+        
+
         # reccupération du dataset d'interet
         try:
             df = pd.read_csv(f"{output_dir}/data-en-hi-de-fr.csv")
@@ -80,6 +81,7 @@ class SET_Spam_Shield_Dependances:
     
     def Phishing_Email_Dataset(self):
         output_dir = f"{self.raw_data_dir}/phishing_email_dataset"
+        kagglehub.dataset_download("naserabdullahalam/phishing-email-dataset", output_dir=output_dir)
 
         # pour chaques fichiers
         for file_name in os.listdir(output_dir):
@@ -125,6 +127,8 @@ class SET_Spam_Shield_Dependances:
 
     def SMS_spam_detection_multilingual(self):
         output_dir = f"{self.raw_data_dir}/sms_spam_detection_multilingual"
+        kagglehub.dataset_download("debapampal2002/sms-dataset1", output_dir=output_dir)
+
         self.__create_dir_if_not_exist(output_dir)
         try: 
             df = pd.read_csv(f'{output_dir}/dataset.csv')
