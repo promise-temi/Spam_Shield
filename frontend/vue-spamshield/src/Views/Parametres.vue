@@ -79,27 +79,27 @@
             <div class="card">
                 <h4>Nom obligatoire</h4>
                 <p>Exige la saisie du nom dans le formulaire.</p>
-                <input type="checkbox" v-on:click="updateFormRequirements(formRequirements.surname.key)" v-model="formRequirements.surname">
+                <input type="checkbox" v-on:click="updateFormRequirements('surname')" v-model="formRequirements.surname">
             </div>
             <div class="card">
                 <h4>Prenom obligatoire</h4>
                 <p>Exige la saisie du Prenom dans le formulaire.</p>
-                <input type="checkbox" v-on:click="updateFormRequirements(formRequirements.name.key)" v-model="formRequirements.name">
+                <input type="checkbox" v-on:click="updateFormRequirements('name')" v-model="formRequirements.name">
             </div>
             <div class="card">
                 <h4>Object obligatoire</h4>
                 <p>Exige la saisie d'un objet dans le formulaire.</p>
-                <input type="checkbox" v-on:click="updateFormRequirements(formRequirements.subject.key)" v-model="formRequirements.subject">
+                <input type="checkbox" v-on:click="updateFormRequirements('subject')" v-model="formRequirements.subject">
             </div>
             <div class="card">
                 <h4>Adresse e-mail obligatoire</h4>
                 <p>Exige la saisie d'une adresse e-mail dans le formulaire</p>
-                <input type="checkbox" v-on:click="updateFormRequirements(formRequirements.email.key)" v-model="formRequirements.email">
+                <input type="checkbox" v-on:click="updateFormRequirements('email')" v-model="formRequirements.email">
             </div>
             <div class="card">
                 <h4>Numéro de téléphone obligatoire</h4>
                 <p>Exige la saisie d'un numéro de téléphone dans le formulaire.</p>
-                <input type="checkbox" v-on:click="updateFormRequirements(formRequirements.number.key)" v-model="formRequirements.phone">
+                <input type="checkbox" v-on:click="updateFormRequirements('phone')" v-model="formRequirements.phone">
             </div>
         </div>
     </section>
@@ -116,39 +116,24 @@
             <div class="card card1">
                 <ul>
                     <!-- <li>Model : <strong>SVC (Support Vector Classifier)</strong></li> -->
-                    <li>Données d'entrainement : <strong>{{ modelInfos.trainingData }}</strong></li>
-                    <li>Données de tests : <strong>{{ modelInfos.testData }}</strong> </li>
+                    <li>Données d'entrainement : <strong>{{ modelInfos.training_nb }}</strong></li>
                 </ul>
                 <div class="card1-lateral">
                     <ul>
                         <li><span>Performance du modèle</span></li>
-                        <li>Exactitude : <strong>{{ modelInfos.modelPerf.exactitude }} </strong> %</li>
-                        <li>Score F1 :  <strong>{{ modelInfos.modelPerf.scoreF1 }} </strong> %</li>
-                        <li>Précision : <strong>{{ modelInfos.modelPerf.precision }} </strong> %</li>
-                        <li>Rappel : <strong>{{ modelInfos.modelPerf.rappel }} </strong> %</li>
+                        <li>Exactitude : <strong>{{ modelInfos.accuracy.toFixed(2) }} </strong></li>
+                        <li>Score F1 :  <strong>{{ modelInfos.f1_score.toFixed(2) }} </strong></li>
+                        <li>Précision : <strong>{{ modelInfos.precision.toFixed(2) }} </strong></li>
+                        <li>Rappel : <strong>{{ modelInfos.recall.toFixed(2) }} </strong></li>
                     </ul>
-                    <ul>
-                        <li><span>Performance du système</span></li>
-                        <li>Exactitude : <strong>{{modelInfos.spamshieldPerf.exactitude}} </strong> %</li>
-                        <li>Score F1 :  <strong>{{modelInfos.spamshieldPerf.scoreF1}} </strong> %</li>
-                        <li>Précision : <strong>{{modelInfos.spamshieldPerf.precision}} </strong> %</li>
-                        <li>Rappel : <strong>{{modelInfos.spamshieldPerf.rappel}} </strong> %</li>
-                    </ul>
+                    
                 </div>
                 <div class="buttons">
                     <button>ML Flow</button>
                     <button>Grafana</button>
                 </div>
             </div>
-            <div class="card card2">
-                <h4>Restaurer une ancienne version du modèle</h4>
-                <p>Saisissez l'identifiant de la version que vous souhaitez restaurer. Vous pouvez retrouver cet identifiant dans MLflow.</p>
-                <fieldset>
-                    <input type="search" name="" id="input-restaurer-model">
-                    <button v-on:click="restoreOldModel">Restaurer</button>
-                </fieldset>
-                
-            </div>
+        
             <div class="card card3">
                 <h4>Réinitialiser le modèle d'IA</h4>
                 <p>Supprimez le modèle actuellement utilisé et revenez à un modèle vierge.</p>
@@ -172,24 +157,15 @@ export default{
                 name : false,
                 surname : false,
                 email : false,
-                number : false,
+                phone : false,
                 subject : false
             },
             modelInfos:{
-                trainingData : "__",
-                testData : "__",
-                modelPerf : {
-                    exactitude : "__",
-                    scoreF1 : "__",
-                    precision : "__",
-                    rappel : "__",
-                },
-                spamshieldPerf : {
-                    exactitude : "__",
-                    scoreF1 : "__",
-                    precision : "__",
-                    rappel : "__",
-                }
+                accuracy: 0, 
+                precision: 0, 
+                recall: 0,
+                f1_score: 0,
+                training_nb: 0,
             }
         }
     },
@@ -282,6 +258,7 @@ export default{
             })
         },
         updateFormRequirements(key){
+            console.log(key)
             api.put(`/update-champs-obligatoires-status/${key}`)
             .then(result => {
                 console.log(result)
@@ -303,25 +280,8 @@ export default{
             })
         },
 
-        restoreOldModel(){
-            let odlModelID = document.querySelector('#input-restaurer-model').value
-            
-            let data = {
-                "odlModelID" : odlModelID
-            }
-            
-            api.post(`/restore-ai-model`, data)
-            .then(result => {
-                console.log(result)
-                this.getSpamshieldModelInfos()
-            })
-            .catch(error => {
-                console.error(error)
-            })
-
-        },
         resetModel(){
-            api.get(`/reset-ai-model`)
+            api.get(`/build_virgin_model`)
             .then(result => {
                 console.log(result)
                 this.getSpamshieldModelInfos()
@@ -335,6 +295,7 @@ export default{
     mounted(){
         this.getAllExpressions()
         this.getAllDestinataires()
+        this.getSpamshieldModelInfos()
         // this.getAllFormRequirements()
         // this.getSpamshieldModelInfos()
     }

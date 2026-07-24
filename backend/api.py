@@ -201,7 +201,7 @@ def delete_destinataire(id:int):
     """Supprime un destinataire"""
     SpamShield_Operations().Delete_Destinataire(id)
     return JSONResponse(status_code=200, content={"message":"ok"})
-
+ 
 @app.get("/get-champs-obligatoires-status")
 def get_champs_obligatoire_status():
     """
