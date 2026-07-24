@@ -8,26 +8,6 @@
                 </div>
             </div>
         </section>
-        <section class="card-deco">
-            <div class="cards">
-                <div class="card card1">
-                    <h4>Utiliser pour l'entraînement</h4>
-                    
-                    <p>Ajouter les données de ce formulaire aux prochains entraînements du modèle.</p>
-                    <fieldset>
-                        <input type="checkbox" name="for-training" id="for-training" v-model="entrainementModel">
-                    </fieldset>
-                </div>
-                <div class="card card2">
-                    <h4>Recevoir le résultat par e-mail</h4>
-                    
-                    <p>Ajouter les données de ce formulaire aux prochains entraînements du modèle.</p>
-                    <fieldset>
-                        <input type="checkbox" name="for-training" id="for-training" v-model="recevoirParMail">
-                    </fieldset>
-                    </div>
-                </div>
-        </section>
         <section class="formulaire-test card-deco">
             <div class="title">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-robot" viewBox="0 0 16 16">
@@ -36,7 +16,7 @@
                 </svg>
                 <h3>Formulaire de simulation</h3>
             </div>
-            <form action="">
+            <form @submit.prevent="test_new_message">
                 <div class="form-fields">
                     <div class="nom-et-prenom">
                         <fieldset>
@@ -81,7 +61,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api from "../axios/axios.js";
 export default{
     data(){
         return{
@@ -103,15 +83,15 @@ export default{
     methods:{
         test_new_message(){
             let data = {
-                metadata : this.data.metadata,
                 message : this.data.text,
+                metadata : this.data.metadata,
                 settings : {
                     entrainementModel : this.entrainementModel,
                     recevoirParMail : this.recevoirParMail
                 }
             }
 
-            axios.post(`\new-message`, data)
+            api.post(`/new-message`, data)
             .then(result => {
                 console.log(result)
             })

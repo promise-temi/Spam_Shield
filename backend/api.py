@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
 import pandas as pd
 
 import os 
@@ -101,12 +102,12 @@ def update_label(id:int):
 # -- ROUTES BANC DE TESTS --
 
 class Metadata(BaseModel):
-    name: str
-    surname: str
-    email: str
-    phone: str
-    subject: str
-    form_id: str
+    name: Optional[str] = None
+    surname: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    subject: Optional[str] = None
+    form_id: Optional[str] = None
 
 class Settings(BaseModel):
     entrainementModel: bool
