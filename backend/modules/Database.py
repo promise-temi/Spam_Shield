@@ -142,7 +142,245 @@ class Postgres_DB:
         cur.close()
         logging.info("Message enregistré avec succès dans la bdd")
 
+    def select_message(self, id: int):
+        cur = self.conn.cursor()
+        try:
+            cur.execute(
+                """SELECT * FROM messages WHERE id = %s;""", (id,))
+            row = cur.fetchone()
+            
+            selected_message = {
+                "id": row[0],
+                "message": self.security_tools.decrypt_(row[2]),
+                "metadata": json.loads(self.security_tools.decrypt_(row[3])),
+                "date": row[4].isoformat(),
+                "model_label": row[5],
+                "model_confidence": row[6],
+                "business_rules_label": row[7],
+                "final_label": row[8],
+                "corrected": row[9],
+                "overridden": row[10],
+                "edition_counter": row[11],
+                "banned_patterns_found": row[12],
+                "period_id": row[13],
+                "receaved": row[14],
+                "consulted": row[15]
+            }
+
+            return selected_message
+
+        except Exception as e:
+            logging.error(
+                f"Erreur récupération message {id}: {e}"
+            )
+            return None
+
+        finally:
+            cur.close()
+
+    def get_all_messages(self, trier_par="date_desc", filtrer_par="*"):
+        cur = self.conn.cursor()
+        query = "SELECT * FROM messages"
+        conditions = []
+
+        if filtrer_par == "spam":
+            conditions.append("final_label = TRUE")
+        elif filtrer_par == "ham":
+            conditions.append("final_label = FALSE")
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        if trier_par == "date_desc":
+            query += " ORDER BY created_at DESC"
+        elif trier_par == "date_asc":
+            query += " ORDER BY created_at ASC"
+
+        try:
+            cur.execute(query)
+            rows = cur.fetchall()
+            selected_messages = [
+                {
+                    "id": row[0],
+                    # "message": self.security_tools.decrypt_(row[2]),
+                    "metadata": self.security_tools.anonymize_metadata(json.loads(self.security_tools.decrypt_(row[3]))),
+                    "date": row[4].isoformat(),
+                    "final_label": row[8]
+                }
+                for row in rows
+            ]
+            print(selected_messages)
+            return selected_messages
+
+        except Exception as e:
+            logging.error(
+                f"Erreur récupération messages : {e}"
+            )
+            raise e
+
+
     
+    def get_dashboard_metrics(self):
+
+        cur = self.conn.cursor()
+
+        try:
+
+            metrics = {}
+
+            # -------------------
+            # KPIs globaux
+            # -------------------
+
+            cur.execute("SELECT COUNT(*) FROM messages")
+            metrics["messages"] = cur.fetchone()[0]
+
+            cur.execute("""
+                SELECT COUNT(*)
+                FROM messages
+                WHERE final_label = FALSE
+            """)
+            metrics["legitimes"] = cur.fetchone()[0]
+
+            cur.execute("""
+                SELECT COUNT(*)
+                FROM messages
+                WHERE final_label = TRUE
+            """)
+            metrics["indesirables"] = cur.fetchone()[0]
+
+            cur.execute("""
+                SELECT COUNT(*)
+                FROM messages
+                WHERE is_corected = TRUE
+            """)
+            metrics["corrections"] = cur.fetchone()[0]
+
+            cur.execute("""
+                SELECT COUNT(*)
+                FROM messages
+                WHERE is_overridden = TRUE
+            """)
+            metrics["reclassements"] = cur.fetchone()[0]
+
+            # -------------------
+            # Distribution
+            # -------------------
+
+            distribution = {}
+
+            cur.execute("""
+                SELECT COUNT(*)
+                FROM messages
+                WHERE model_label = FALSE
+            """)
+            distribution["ham_prediction_ia"] = cur.fetchone()[0]
+
+            cur.execute("""
+                SELECT COUNT(*)
+                FROM messages
+                WHERE model_label = TRUE
+            """)
+            distribution["spam_prediction_ia"] = cur.fetchone()[0]
+
+            cur.execute("""
+                SELECT COUNT(*)
+                FROM messages
+                WHERE business_rules_label = TRUE
+            """)
+            distribution["spam_patterns_interdits"] = cur.fetchone()[0]
+
+            cur.execute("""
+                SELECT COUNT(*)
+                FROM messages
+                WHERE is_overridden = TRUE
+            """)
+            distribution["spam_override"] = cur.fetchone()[0]
+
+            cur.execute("""
+                SELECT COUNT(*)
+                FROM messages
+                WHERE is_corected = TRUE
+                AND final_label = FALSE
+            """)
+            distribution["ham_corriges"] = cur.fetchone()[0]
+
+            cur.execute("""
+                SELECT COUNT(*)
+                FROM messages
+                WHERE is_corected = TRUE
+                AND final_label = TRUE
+            """)
+            distribution["spam_corriges"] = cur.fetchone()[0]
+
+            # -------------------
+            # Métriques IA
+            # -------------------
+
+            cur.execute("""
+                SELECT AVG(model_confidence)
+                FROM messages
+            """)
+            metrics["avg_confidence"] = float(
+                cur.fetchone()[0] or 0
+            )
+
+            cur.execute("""
+                SELECT AVG(model_confidence)
+                FROM messages
+                WHERE final_label = TRUE
+            """)
+            metrics["avg_confidence_spam"] = float(
+                cur.fetchone()[0] or 0
+            )
+
+            cur.execute("""
+                SELECT AVG(model_confidence)
+                FROM messages
+                WHERE final_label = FALSE
+            """)
+            metrics["avg_confidence_ham"] = float(
+                cur.fetchone()[0] or 0
+            )
+
+            cur.execute("""
+                SELECT AVG(
+                    COALESCE(
+                        array_length(
+                            banned_patterns_found,
+                            1
+                        ),
+                        0
+                    )
+                )
+                FROM messages
+            """)
+            metrics["avg_banned_patterns"] = float(
+                cur.fetchone()[0] or 0
+            )
+
+            metrics["correction_rate"] = (
+                metrics["corrections"]
+                / metrics["messages"]
+            )
+
+            metrics["override_rate"] = (
+                metrics["reclassements"]
+                / metrics["messages"]
+            )
+
+            return {
+                "metrics": metrics,
+                "distribution_par_categorie": distribution
+            }
+
+        except Exception as e:
+            logging.error(
+                f"Erreur récupération dashboard : {e}"
+            )
+            return None
+
+        finally:
+            cur.close()
+
     def set_new_phase(self, start, end):
         cur = self.conn.cursor()
         cur.execute(f"INSERT INTO periods (start_date, end_date) VALUES (%s, %s)", (start, end,))
@@ -273,12 +511,17 @@ class Postgres_DB:
     def update_message_label(self, id:int):
         cur = self.conn.cursor()
         # modifier if edited a l'opposé de ce qu'il est actuellement
-        cur.execute("Update messages SET is_edited = NOT is_edited WHERE id = (%s);", (id,))
-        cur.execute("UPDATE messages SET edition_counter = edition_counter + 1 WHERE id = (%s);", (id,))
-        cur.execute("UPDATE messages SET final_label = NOT final_label WHERE id = (%s);", (id,))
+        cur.execute(
+            """
+            UPDATE messages
+            SET
+                is_corected = NOT is_corected,
+                final_label = NOT final_label,
+                edition_counter = edition_counter + 1
+            WHERE id = %s;
+            """,
+            (id,)
+        )        
         self.conn.commit()
         cur.close()
         logging.info(f"Le label du message avec l'ID '{id}' a été mis à jour avec succès.")
-
-    def get_all_messages(self):
-        pass

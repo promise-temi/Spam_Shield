@@ -20,8 +20,9 @@ from sklearn.metrics import (
     confusion_matrix,
     classification_report
 )
-import joblib
 
+
+import joblib
 
 class Model:
     def __init__(self, prediction_pipe=False, model=LinearSVC(max_iter=20000, random_state=42), model_name="LinearSVC", metadata={}, seuil_confiance=True):
@@ -140,6 +141,7 @@ class Model:
             "classification_report": class_report
         }
     
+    
     def save_model_mlflow(self, model, model_name):
         ML_Flow_Operations().save_model(model, model_name)
     
@@ -157,7 +159,6 @@ class Model:
         self.get_confidence(model, X)
         if self.seuil_confiance:
             final_pred = self.confidence_based_pred(y_pred, self.confidence_score)
-            self.override = True
             return final_pred
         else:
             return y_pred
@@ -170,6 +171,7 @@ class Model:
     def confidence_based_pred(self, pred, confidence):
         if pred[0] == 0 and confidence <= 0.60:
             pred[0] = not pred[0]
+            self.override = True
             return pred
         else:
             return pred

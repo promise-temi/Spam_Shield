@@ -46,3 +46,6 @@ CREATE TABLE IF NOT EXISTS Prospects_mails (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+
+
+

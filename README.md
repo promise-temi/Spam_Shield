@@ -21,6 +21,7 @@ key = Fernet.generate_key()
 print(key.decode())
 
 
+docker compose exec postgres psql -U postgres -d spamshield
 
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;

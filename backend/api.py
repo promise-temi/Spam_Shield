@@ -31,51 +31,17 @@ from modules.SpamShield_Operations import SpamShield_Operations
 from modules.Model import Model
 
 # -- ROUTES TABLEAU DE BORD --
-app.get('dashbord-metrics-and-graphs')
-def get_dashbord_metrics_and_graphs()->dict:
-    """
-    Pour le tableau de bord:
-        - Réccuperation de la période actuelle
-        - Réccupération des données pour les métriques 
-        - Réccuperation des données pour les graphiques 
+@app.get("/dashboard-metrics")
+def dashboard_metrics():
+    data = SpamShield_Operations().Dashbord()
+    response_data = {
+        "messages" : data
+    }
+    return JSONResponse(status_code=200, content=response_data)
     
-    Returns:
-        {
-            "period": {
-                "start" : String,
-                "end" : String
-            },
-            "metrics": {
-                "messages" : Int,
-                "legitimes" : Int,
-                "indesirable" : Int,
-                "corrections" : Int,
-                "reclassement" : Int
-            },
-            "graphics" :{
-                "distrubution_par_categorie" : {
-                    "ham_prediction_ia" : Int,
-                    "spam_patterns_interdits" : Int,
-                    "spam_prediction_ia" : Int,
-                    "spam_low_condidence" : Int,
-                    "ham_corriges" : Int,
-                    "spam_corriges" : Int,
-                },
-                "evolution_par_categorie" : {
-                    "ham_prediction_ia" : List[int],
-                    "spam_patterns_interdits" : List[int],
-                    "spam_prediction_ia" : List[int],
-                    "spam_low_condidence" : List[int],
-                    "ham_corriges" : List[int],
-                    "spam_corriges" : List[int],
-                }
-            }
-        }
-    """
-    pass
 
-app.get("get-messages/{trier_par}/{filter_par}")
-def get_messages(trier_par:str, filtrer_par:str)->dict:
+@app.get("/get-messages/{trier_par}/{filtrer_par}")
+def get_all_messages(trier_par:str, filtrer_par:str)->dict:
     """
     Réccupération des message - Tout (par défault) ou filtré (selon filtres)
     Returns:
@@ -91,9 +57,14 @@ def get_messages(trier_par:str, filtrer_par:str)->dict:
             ]
         }
     """
-    pass
+    messages = SpamShield_Operations().Show_Messages(trier_par, filtrer_par)
+    response_data = {
+            "messages" : messages
+        }
+    return JSONResponse(status_code=200, content=response_data)
+    
 
-app.get("get_message-and-related-metrics/{selected_message_id}")
+@app.get("/get_message-and-related-metrics/{selected_message_id}")
 def get_message_and_related_metrics(selected_message_id:int)->dict:
     """ 
     Réccupère le message ainsi que les metriques et informations les predictions du model ia et métier et autres
@@ -115,7 +86,17 @@ def get_message_and_related_metrics(selected_message_id:int)->dict:
             "id" : Int
         }
     """
-    pass 
+    selected_message = SpamShield_Operations().Select_Message(selected_message_id)
+    response_data = {
+            "selected_message" : selected_message
+        }
+    return JSONResponse(status_code=200, content=response_data)
+
+@app.get("/update_label/{id}")
+def update_label(id:int):
+    SpamShield_Operations().Update_label(id)
+    return JSONResponse(status_code=200, content={"message":"ok"})
+    
 
 # -- ROUTES BANC DE TESTS --
 

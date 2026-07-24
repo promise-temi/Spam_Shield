@@ -40,7 +40,13 @@ class Business_Rules:
         return is_spam
         
     
-
+    def business_rules_ML_test_pipeline(self, text:str, metadata)->int :
+        self.filter_message_lenght(text)
+        if self.gibberish_presence:
+            self.gibberish(text)
+        is_spam = self.delibaration()
+        print(self.banned_patterns_found)
+        return is_spam
 
     def gibberish(self, text:str):
         df = pd.read_parquet(f"{os.path.dirname(__file__)}/data/corpus.parquet")

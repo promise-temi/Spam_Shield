@@ -31,4 +31,39 @@ class Security:
         except Exception as err:
             logging.error(f"Une erreur s'est produite pendant l'encryptage: {err}")
 
+    def anonymize_metadata(self, metadata_: dict) -> dict:
+
+        metadata = metadata_.copy()
+
+        if "email" in metadata and metadata["email"]:
+            try:
+                email = metadata["email"]
+                login, domain = email.split("@")
+                metadata["email"] = login[:2] + "****@" + domain
+            except ValueError:
+                return metadata_["email"]
+
+
+        if "phone" in metadata and metadata["phone"]:
+            try:
+                phone = metadata["phone"]
+                metadata["phone"] = phone[:2] + "*" * (len(phone) - 2)
+            except ValueError:
+                            return metadata_["phone"]
+
+        if "name" in metadata and metadata["name"]:
+            try:
+                name = metadata["name"]
+                metadata["name"] = name[0] + "*" * (len(name) - 1)
+            except ValueError:
+                return metadata_["name"]
+
+        if "surname" in metadata and metadata["surname"]:
+            try:
+                surname = metadata["surname"]
+                metadata["surname"] = surname[0] + "*" * (len(surname) - 1)
+            except ValueError:
+                return metadata_["surname"]
+
+        return metadata
 
