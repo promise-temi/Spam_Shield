@@ -4,9 +4,9 @@
 <!-- BODY -->
 <main>
     <!-- PERIOD -->
-    <div class="period-and-date">
+    <!-- <div class="period-and-date">
         <h2 class="period">01/07/2026 - 07/07/2026</h2>
-    </div>
+    </div> -->
     <!-- DASHBORD SECTION -->
     <section class="dashbord">
         <div class="global-infos-cards">
@@ -18,7 +18,7 @@
                     </svg>
                     <h3>Messages</h3>
                 </div>
-                <p class="info-value">17</p>
+                <p class="info-value">{{dashbord_metrics?.metrics?.messages??0}}</p>
             </div>
             <!-- INFO CARD 2 -->
             <div class="g-info-card card-deco">
@@ -29,7 +29,7 @@
                     </svg>
                     <h3>Légitimes</h3>
                 </div>
-                <p class="info-value">12</p>
+                <p class="info-value">{{dashbord_metrics?.metrics?.legitimes??0}}</p>
             </div>
             <!-- INFO CARD 3 -->
             <div class="g-info-card card-deco">
@@ -39,7 +39,7 @@
                     </svg>
                     <h3>Indésirables</h3>
                 </div>
-                <p class="info-value">5</p>
+                <p class="info-value">{{dashbord_metrics?.metrics?.indesirables??0}}</p>
             </div>
             <!-- INFO CARD 4 -->
             <div class="g-info-card g-info-card-blue card-deco">
@@ -49,7 +49,7 @@
                     </svg>
                     <h3>Corrections</h3>
                 </div>
-                <p class="info-value">1</p>
+                <p class="info-value">{{dashbord_metrics?.metrics?.corrections??0}}</p>
             </div>
             <!-- INFO CARD 5 -->
             <div class="g-info-card  g-info-card-blue card-deco">
@@ -59,7 +59,7 @@
                     </svg>
                     <h3>Reclassements</h3>
                 </div>
-                <p class="info-value">2</p>
+                <p class="info-value">{{dashbord_metrics?.metrics?.reclassements??0}}</p>
             </div>
         </div>
         <div class="global-infos-graphs">
@@ -71,7 +71,7 @@
                     </svg>
                     <h3>Distribution par Catégories</h3>
                 </div>
-                <GraphDistributionParCat></GraphDistributionParCat>
+                <GraphDistributionParCat :graphValues_=dashbord_metrics?.distribution_par_categorie?.graph_list??[]></GraphDistributionParCat>
 
             </div>
             <!-- INFO GRAPH 2 -->
@@ -80,9 +80,22 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-envelope-fill" viewBox="0 0 16 16">
                         <path d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414zM0 4.697v7.104l5.803-3.558zM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586zm3.436-.586L16 11.801V4.697z"/>
                     </svg>
-                    <h3>Evolution par Catégories</h3>
+                    <h3>Niveau de Confiance du Modèle</h3>
                 </div>
-                <GraphEvolutionParGraph></GraphEvolutionParGraph>
+                <div class="confianc-infoss">
+                    <GraphGaugeConfidence :confidence="dashbord_metrics?.metrics?.avg_confidence??0"></GraphGaugeConfidence>
+                    <div style="display: flex; flex-direction: column; gap: 10px; background-color: #03005beb; padding: 10px;">
+                        <div class="confiance-ham">
+                            <p style="text-decoration: underline; color: white!important; font-weight: 600; font-size: 14px; padding: 5px 10px;">HAM</p>
+                            <p style="color: white!important; font-weight: 600; font-size: 14px; padding: 5px 10px; ">{{ ham_status }}</p>
+                        </div>
+                        <div class="confiance-spam">
+                            <p style="text-decoration: underline;">SPAM</p>
+                            <p>{{ spam_status }}</p>
+                        </div>
+
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -319,21 +332,116 @@
 </template>
 
 <script>
+import api from "../axios/axios.js";
 // COMPOSANTS GRAPHIQUES PLOTLY
 import GraphDistributionParCat from '@/Components/GraphDistributionParCat.vue';
 import GraphEvolutionParGraph from '@/Components/GraphEvolutionParGraph.vue';
-
+import GraphGaugeConfidence from '@/Components/GraphGaugeConfidence.vue';
 export default{
     data(){
         return{
-
+            dashbord_metrics : {}
         }
     },
     components:{
         GraphDistributionParCat,
         GraphEvolutionParGraph,
+        GraphGaugeConfidence,
 
+    },
+    methods:{
+        get_dashbord_metrics(){
+            api.get(`/dashboard-metrics`)
+            .then(response => {
+                console.log(response.data)
+                this.dashbord_metrics = response.data.metrics
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        },
+        get_all_messages(trier_par='date_desc', filtrer_par='*'){
+            api.get(`/get-messages/${trier_par}/${filtrer_par}`)
+            .then(response => {
+                console.log(response.data)
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        },
+        get_selected_message(selected_message_id){
+            api.get(`/get_message-and-related-metrics/${selected_message_id}`)
+            .then(response => {
+                console.log(response.data)
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        },
+        updateLabel(id){
+            api.get(`/update_label/${id}`)
+            .then(response => {
+                console.log(response.data)
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        },
+    },
+    mounted(){
+        this.get_dashbord_metrics()
+    },
+    computed: {
+        spam_status() {
+            const c = this.dashbord_metrics?.metrics?.avg_confidence_spam??0;
+            const corrections = this.dashbord_metrics?.metrics?.spam_corriges??0;
+
+            if (c >= 0.75) {
+                if (corrections <= 1) {
+                    return "Le modèle est excellent pour détecter les spams. Il reconnaît très bien vos contextes habituels.";
+                }
+                return "Le modèle détecte très bien les spams, même si quelques corrections montrent qu'il ajuste encore certains cas particuliers.";
+            }
+
+            if (c >= 0.50) {
+                if (corrections <= 2) {
+                    return "Le modèle est bon pour détecter les spams, mais il peut encore s'améliorer sur certains cas.";
+                }
+                return "Le modèle détecte les spams correctement, mais les corrections indiquent qu'il hésite encore sur plusieurs contextes.";
+            }
+
+            // c < 0.50
+            if (corrections >= 3) {
+                return "Le modèle apprend encore à reconnaître les spams. Plusieurs corrections montrent un nouveau contexte ou des messages inhabituels.";
+            }
+            return "Le modèle n'est pas encore sûr pour les spams. Il découvre probablement de nouveaux types de messages.";
+        },
+        ham_status() {
+            const c = this.dashbord_metrics?.metrics?.avg_confidence_ham??0;
+            const corrections = this.dashbord_metrics?.metrics?.ham_corriges??0;
+
+            if (c >= 0.75) {
+                if (corrections <= 1) {
+                    return "Le modèle identifie très bien les messages légitimes. Il est habitué à vos données.";
+                }
+                return "Le modèle reconnaît bien les messages légitimes, même si quelques corrections montrent des cas ambigus.";
+            }
+
+            if (c >= 0.50) {
+                if (corrections <= 2) {
+                    return "Le modèle identifie correctement les messages légitimes, mais il peut encore s'améliorer.";
+                }
+                return "Le modèle reconnaît les messages légitimes, mais les corrections indiquent qu'il hésite sur certains contextes.";
+            }
+
+            // c < 0.50
+            if (corrections >= 3) {
+                return "Le modèle apprend encore à reconnaître les messages légitimes. Plusieurs corrections montrent un contexte nouveau.";
+            }
+            return "Le modèle n'est pas encore sûr pour les messages légitimes. Il découvre probablement de nouveaux types de contenus.";
+        }
     }
+
 }
 
 </script>
@@ -404,6 +512,7 @@ div.g-info-graph-dis{
 
 div.g-info-graph-evo{
     width: 60%;
+    height: 230px;
 }
 
 div#dis-per-cat,#evo-per-cat{
@@ -414,7 +523,33 @@ div#dis-per-cat,#evo-per-cat{
     overflow: hidden;
 }
 
+div#gauge-confidence {
+    width: 300px; 
+    height: 150px;
+    border: 1px solid #b0ccfd81;
+    background-color: #F1F5FC;
+    border-radius: 10px;
+    overflow: hidden;
+}
+div.confianc-infoss{
+    display: flex;
+    gap: 20px;
+    margin-top: 20px;
+}
 
+div.confiance-ham,div.confiance-spam{
+    display: flex;
+    flex-direction: column;
+    
+    height: 50px;
+}
+
+data.confiance-ham p,div.confiance-spam p{
+    color: white!important;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 5px 10px;
+}
 
 /* BOITE DE RECEPTION */
 section.boite-de-reception{

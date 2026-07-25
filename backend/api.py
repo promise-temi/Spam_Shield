@@ -36,7 +36,7 @@ from modules.Model import Model
 def dashboard_metrics():
     data = SpamShield_Operations().Dashbord()
     response_data = {
-        "messages" : data
+        "metrics" : data
     }
     return JSONResponse(status_code=200, content=response_data)
     

@@ -367,10 +367,17 @@ class Postgres_DB:
                 / metrics["messages"]
             )
 
-            return {
+            metrics["ham_corriges"] = distribution["ham_corriges"]
+            metrics["spam_corriges"] = distribution["spam_corriges"]
+        
+
+            final_data = {
                 "metrics": metrics,
                 "distribution_par_categorie": distribution
             }
+            final_data["distribution_par_categorie"]['graph_list'] = [final_data["distribution_par_categorie"]["ham_prediction_ia"],final_data["distribution_par_categorie"]["spam_prediction_ia"],final_data["distribution_par_categorie"]["spam_patterns_interdits"],final_data["distribution_par_categorie"]["spam_override"],final_data["distribution_par_categorie"]["ham_corriges"],final_data["distribution_par_categorie"]["spam_corriges"]]
+            
+            return final_data
 
         except Exception as e:
             logging.error(
