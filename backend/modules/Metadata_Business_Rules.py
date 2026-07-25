@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import sys
 import logging
+import json
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from Markov_Model import MarkovGibberishDetector
 from Database import Postgres_DB
@@ -10,13 +11,14 @@ from Database import Postgres_DB
 
 class Metadata_Business_Rules:
     def __init__(self):
-        db = Postgres_DB()
-        self.name_presence = db.select_metadata_value('name')
-        self.surname_presence = db.select_metadata_value('surname')
-        self.email_presence = db.select_metadata_value('email')
-        self.phone_presence = db.select_metadata_value('phone')
-        self.subject_presence = db.select_metadata_value('subject')
-        self.gibberish_presence = db.select_metadata_value('gibberish')
+        with open(f"{os.path.dirname(__file__)}/data/required_metadata.json", "r", encoding="utf-8") as f:
+            self.metadata_values = json.load(f)
+        self.name_presence = self.metadata_values['name']
+        self.surname_presence = self.metadata_values['surname']
+        self.email_presence = self.metadata_values['email']
+        self.phone_presence = self.metadata_values['phone']
+        self.subject_presence = self.metadata_values['subject']
+        self.gibberish_presence = self.metadata_values['gibberish']
         self.detector = MarkovGibberishDetector()
         
 
@@ -24,11 +26,16 @@ class Metadata_Business_Rules:
         df = pd.read_parquet(f"{os.path.dirname(__file__)}/data/corpus.parquet")
         self.detector.train_model(df["token"].tolist())
         is_giberish = self.detector.is_gibberish(text)
-        print(f"giberish score = {self.detector.score_}")
+        try:
+            print(f"giberish score = {self.detector.score_}")
+        except AttributeError:
+            logging.error('Pas de score gibberish, la chaine de texte est peut-être trop courte pour être évaluée.')
         if is_giberish:
             return False
 
     def metadata_rules_pipeline(self, metadata:object):
+        logging.info(f"Metadata_Business_Rules initialized with name_presence={self.name_presence}, surname_presence={self.surname_presence}, email_presence={self.email_presence}, phone_presence={self.phone_presence}, subject_presence={self.subject_presence}, gibberish_presence={self.gibberish_presence}")
+
         self.check_name(metadata['name'])
         self.check_surname(metadata['surname'])
         self.check_email(metadata['email'])

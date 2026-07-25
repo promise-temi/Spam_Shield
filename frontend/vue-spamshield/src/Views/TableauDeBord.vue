@@ -80,23 +80,23 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-envelope-fill" viewBox="0 0 16 16">
                         <path d="M.05 3.555A2 2 0 0 1 2 2h12a2 2 0 0 1 1.95 1.555L8 8.414zM0 4.697v7.104l5.803-3.558zM6.761 8.83l-6.57 4.027A2 2 0 0 0 2 14h12a2 2 0 0 0 1.808-1.144l-6.57-4.027L8 9.586zm3.436-.586L16 11.801V4.697z"/>
                     </svg>
-                    <h3>Niveau de Confiance du Modèle</h3>
+                    <h3>Indice de Certitude du Modèle</h3>
                 </div>
                 <div class="confianc-infoss">
-                    <GraphGaugeConfidence :confidence="dashbord_metrics?.metrics?.avg_confidence??0"></GraphGaugeConfidence>
-                    <div style="display: flex; flex-direction: column; gap: 10px; background-color: #03005beb; padding: 10px;">
+                    <div style="padding-left: 25px;">
+                        <GraphGaugeConfidence :confidence="dashbord_metrics?.metrics?.avg_confidence??0"></GraphGaugeConfidence>
+                    </div>
+                    <div class="confidence-spam-ham">
                         <div class="confiance-ham">
-                            <p style="text-decoration: underline; color: white!important; font-weight: 600; font-size: 14px; padding: 5px 10px;">HAM</p>
-                            <p style="color: white!important; font-weight: 600; font-size: 14px; padding: 5px 10px; ">{{ ham_status }}</p>
+                            <p>{{ ham_status }}</p>
                         </div>
                         <div class="confiance-spam">
-                            <p style="text-decoration: underline;">SPAM</p>
                             <p>{{ spam_status }}</p>
                         </div>
-
                     </div>
                 </div>
             </div>
+            
         </div>
     </section>
     <!-- RECEPTION SECTION -->
@@ -107,110 +107,46 @@
                 <!-- TRIER PAR -->
                 <fieldset class="trier-par">
                     <label for="trier">Trier par : </label>
-                    <select name="trier" id="trier-par">
-                        <option value="None"></option>
-                        <option value="plus-recents">plus récents</option>
-                        <option value="moins-recents">moins récents</option>
+                    <select v-model="trier_par">
+                        <option value="date_desc">plus récents</option>
+                        <option value="date_asc">moins récents</option>
                     </select>
                 </fieldset>
+
                 <!-- FILTRER PAR -->
                 <fieldset class="filtrer-par">
                     <label for="filtrer">Filtrer par : </label>
-                    <select name="filtrer" id="filtrer-par">
-                        <option value="None"></option>
-                        <option value="legitimes">légitimes</option>
-                        <option value="indésirables">indésirables</option>
-                        <option value="consultés">consultés</option>
-                        <option value="non-consultés">non consultés</option>
-                        <option value="corrigés">corrigés</option>
-                        <option value="non-corrigés">non corrigés</option>
-                        <option value="reclassés">reclassés</option>
-                        <option value="non-reclassés">non reclassés</option>
+                    <select v-model="filtrer_par">
+                        <option value="*">tous</option>
+                        <option value="ham">légitimes</option>
+                        <option value="spam">indésirables</option>
+                        <option value="corriges">corrigés</option>
+                        <option value="reclasses">reclassés</option>
+                        <option value="interdits">interdits</option>
                     </select>
                 </fieldset>
             </div>
+
             <!-- MESSAGES -->
             <div class="messages">
                 <!-- SELECTED MESSAGE -->
-                <div class="card selected-card  card-deco">
+                <div v-for="message in messages" class="card selected-card  card-deco" @click="get_selected_message(message.id)">
                     <h3>
                         <svg style="position: relative; top: 2px;" xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
                             <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
                         </svg>
 
-                        Indésirable
+                        {{message.final_label?'Indésirable':'Légitime'}}
                     </h3>
-                    <span class="date">23/06/2026 13:30</span>
-                    <p class="mail">j*******@o******.net</p>
-                    <p class="message-resume">Lorem ipsum, du texte et encore du contenue et plus et enco, orem ipsum, du texte et encore du contenue et plus et enco...</p>
+                    <span class="date">{{ formatDate(message.date) }}</span>
+                    <p class="mail">{{message.metadata.email}}</p>
+                    <p class="message-resume">{{message.metadata.subject}}</p>
                 </div>
-                <!-- OTHER MESSAGES -->
-                <div class="card card-deco">
-                    <h3>
-                        <svg style="position: relative; top: 2px;" xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
-                            <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
-                        </svg>
-
-                        Indésirable
-                    </h3>
-                    <span class="date">23/06/2026 13:30</span>
-                    <p class="mail">j*******@o******.net</p>
-                    <p class="message-resume">Lorem ipsum, du texte et encore du contenue et plus et enco, orem ipsum, du texte et encore du contenue et plus et enco...</p>
-                </div>
-                <div class="card card-deco">
-                    <h3>
-                        <svg style="position: relative; top: 2px;" xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
-                            <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
-                        </svg>
-
-                        Indésirable
-                    </h3>
-                    <span class="date">23/06/2026 13:30</span>
-                    <p class="mail">j*******@o******.net</p>
-                    <p class="message-resume">Lorem ipsum, du texte et encore du contenue et plus et enco, orem ipsum, du texte et encore du contenue et plus et enco...</p>
-                </div>
-                <div class="card card-deco">
-                    <h3>
-                        <svg style="position: relative; top: 2px;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2-all" viewBox="0 0 16 16">
-                            <path d="M12.354 4.354a.5.5 0 0 0-.708-.708L5 10.293 1.854 7.146a.5.5 0 1 0-.708.708l3.5 3.5a.5.5 0 0 0 .708 0zm-4.208 7-.896-.897.707-.707.543.543 6.646-6.647a.5.5 0 0 1 .708.708l-7 7a.5.5 0 0 1-.708 0"/>
-                            <path d="m5.354 7.146.896.897-.707.707-.897-.896a.5.5 0 1 1 .708-.708"/>
-                        </svg>
-
-                        Légitime
-                    </h3>
-                    <span class="date">23/06/2026 13:30</span>
-                    <p class="mail">j*******@o******.net</p>
-                    <p class="message-resume">Lorem ipsum, du texte et encore du contenue et plus et enco, orem ipsum, du texte et encore du contenue et plus et enco...</p>
-                </div>
-                <div class="card card-deco">
-                    <h3>
-                        <svg style="position: relative; top: 2px;" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
-                            <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
-                        </svg>
-
-                        Indésirable
-                    </h3>
-                    <span class="date">23/06/2026 13:30</span>
-                    <p class="mail">j*******@o******.net</p>
-                    <p class="message-resume">Lorem ipsum, du texte et encore du contenue et plus et enco, orem ipsum, du texte et encore du contenue et plus et enco...</p>
-                </div>
+                
             </div>
-            
         </div>
         <div class="message-et-info">
-            <!-- STATUS -->
-            <div class="status">
-                <!-- A ETE CONSULTE -->
-                <div class="msg-consulte">
-                    <p>Message consulté</p>
-                    <input type="checkbox" checked disabled>
-                </div>
-                <!-- A ETE RECU PAR MAIL -->
-                <div class="msg-consulte">
-                    <p>Message reçu</p>
-                    <input type="checkbox"  disabled>
-                </div>
-            </div>
+            
             
             <div class="table-et-message">
                 <!-- TABLE -->
@@ -223,7 +159,8 @@
                                 Label Final
                             </th>
                             <td colspan="2" style="color: rgb(253, 56, 56); font-weight: 800;">
-                                Indésirable
+                                {{ selected_message?.final_label === true ? 'Indésirable' : selected_message?.final_label === false ? 'Légitime' : '__' }}
+
                             </td>
                         </tr>
 
@@ -236,7 +173,8 @@
                                 Prédiction
                             </th>
                             <td>
-                                Indésirable
+                                {{ selected_message?.model_label === true ? 'Indésirable' : selected_message?.model_label === false ? 'Légitime' : '__' }}
+
                             </td>
                         </tr>
                         <tr class="model-ia">
@@ -244,7 +182,12 @@
                                 Score de confiance
                             </th>
                             <td>
-                                0.92
+                                {{ selected_message?.model_confidence != null 
+                                    ? selected_message.model_confidence.toFixed(2) 
+                                    : '__' 
+                                }}
+
+
                             </td>
                         </tr>
 
@@ -257,7 +200,8 @@
                                 Délibération
                             </th>
                             <td>
-                                Indésirable
+                                {{ selected_message?.business_rules_label === true ? 'Indésirable' : selected_message?.business_rules_label === false ? 'Légitime' : '__' }}
+
                             </td>
                         </tr>
                         <tr class="regle-metiers">
@@ -266,8 +210,8 @@
                             </th>
                             <td>
                                 <ul>
-                                    <li>contient gibberish/charabia</li>
-                                    <li>Aucun mail renseigné</li>
+                                    <li v-for="pattern in selected_message?.banned_patterns_found??[]">{{ pattern }}</li>
+                                    
                                 </ul>
                             </td>
                         </tr>
@@ -281,7 +225,8 @@
                                 Reclassé
                             </th>
                             <td>
-                                NON
+                                {{ selected_message?.overridden === true ? 'OUI' : selected_message?.overridden === false ? 'NON' : '__' }}
+
                             </td>
                         </tr>
                         <tr class="regle-metiers">
@@ -289,7 +234,7 @@
                                 Corrigé
                             </th>
                             <td>
-                                NON
+                                {{ selected_message?.corrected === true ? 'OUI' : selected_message?.corrected === false ? 'NON' : '__' }}
                             </td>
                         </tr>
                     </table>
@@ -311,18 +256,23 @@
                         </div>
                     </div>
                     <div class="content-and-metadata">
-                        <p><strong>Date :</strong> 23/06/2026  -  13:30</p>
-                        <p><strong>Nom :</strong> D**</p>
-                        <p><strong>Prenom :</strong> J***</p>
-                        <p><strong>Email :</strong> j******@*****.com</p>
+                        <p><strong>Date :</strong> {{ selected_message?.date 
+                                ? formatDate(selected_message.date) 
+                                : '__' 
+                            }}
+                            </p>
+                        <p><strong>Nom :</strong> {{ selected_message?.metadata?.surname??'__' }}</p>
+                        <p><strong>Prenom :</strong> {{ selected_message?.metadata?.name??'__' }}</p>
+                        <p><strong>Email :</strong> {{ selected_message?.metadata?.email??'__' }}</p>
+                        <p><strong>Phone :</strong> {{ selected_message?.metadata?.phone??'__' }}</p>
                         <div class="content">
                             <strong>Message :</strong>
-                            <p>Lorem ipsum dolor sit amet consectetur. Condimentum tellus nibh dis quis gravida non feugiat imperdiet fermentum. Lacus pulvinar facilisis mauris vitae in. Sed rhoncus ac etiam arcu quam quis eget. Libero et nisi dictum mattis metus in nunc ! </p>
+                            <p>{{ selected_message?.message??'__' }}</p>
                         </div>
                     </div>
-                    <div class="correction">
-                        <p>Ce message vous semble être légitime ?</p>
-                        <button>Correction</button>
+                    <div class="correction" v-if="selected_message.id">
+                        <p>Le modèle s'est trompé ? Ce message vous semble être {{ selected_message?.model_label === false ? 'indésirable' : selected_message?.model_label === true ? 'légitime' : '__' }} ?</p>
+                        <button  v-on:click="updateLabel(selected_message.id) ">Correction</button>
                     </div>
                 </div>
             </div>
@@ -340,7 +290,11 @@ import GraphGaugeConfidence from '@/Components/GraphGaugeConfidence.vue';
 export default{
     data(){
         return{
-            dashbord_metrics : {}
+            dashbord_metrics : {},
+            messages : [],
+            trier_par: "date_desc",
+            filtrer_par: "*",
+            selected_message: {}
         }
     },
     components:{
@@ -364,6 +318,7 @@ export default{
             api.get(`/get-messages/${trier_par}/${filtrer_par}`)
             .then(response => {
                 console.log(response.data)
+                this.messages = response.data.messages
             })
             .catch(error => {
                 console.error(error)
@@ -373,6 +328,7 @@ export default{
             api.get(`/get_message-and-related-metrics/${selected_message_id}`)
             .then(response => {
                 console.log(response.data)
+                this.selected_message = response.data.selected_message
             })
             .catch(error => {
                 console.error(error)
@@ -390,7 +346,16 @@ export default{
     },
     mounted(){
         this.get_dashbord_metrics()
+        this.get_all_messages()
     },
+    watch: {
+    trier_par() {
+        this.get_all_messages(this.trier_par, this.filtrer_par);
+    },
+    filtrer_par() {
+        this.get_all_messages(this.trier_par, this.filtrer_par);
+    }
+},
     computed: {
         spam_status() {
             const c = this.dashbord_metrics?.metrics?.avg_confidence_spam??0;
@@ -398,23 +363,23 @@ export default{
 
             if (c >= 0.75) {
                 if (corrections <= 1) {
-                    return "Le modèle est excellent pour détecter les spams. Il reconnaît très bien vos contextes habituels.";
+                    return "Le modèle est excellent pour détecter les messages indésirables. Il reconnaît très bien vos contextes habituels.";
                 }
-                return "Le modèle détecte très bien les spams, même si quelques corrections montrent qu'il ajuste encore certains cas particuliers.";
+                return "Le modèle détecte très bien les messages indésirables, même si quelques corrections montrent qu'il ajuste encore certains cas particuliers.";
             }
 
             if (c >= 0.50) {
                 if (corrections <= 2) {
-                    return "Le modèle est bon pour détecter les spams, mais il peut encore s'améliorer sur certains cas.";
+                    return "Le modèle est bon pour détecter les messages indésirables, mais il peut encore s'améliorer sur certains cas.";
                 }
-                return "Le modèle détecte les spams correctement, mais les corrections indiquent qu'il hésite encore sur plusieurs contextes.";
+                return "Le modèle détecte les messages indésirables correctement, mais les corrections indiquent qu'il hésite encore sur plusieurs contextes.";
             }
 
             // c < 0.50
             if (corrections >= 3) {
-                return "Le modèle apprend encore à reconnaître les spams. Plusieurs corrections montrent un nouveau contexte ou des messages inhabituels.";
+                return "Le modèle apprend encore à reconnaître les messages indésirables. Plusieurs corrections montrent un nouveau contexte ou des messages inhabituels.";
             }
-            return "Le modèle n'est pas encore sûr pour les spams. Il découvre probablement de nouveaux types de messages.";
+            return "Le modèle n'est pas encore sûr pour les messages indésirables. Il découvre probablement de nouveaux types de messages.";
         },
         ham_status() {
             const c = this.dashbord_metrics?.metrics?.avg_confidence_ham??0;
@@ -439,7 +404,19 @@ export default{
                 return "Le modèle apprend encore à reconnaître les messages légitimes. Plusieurs corrections montrent un contexte nouveau.";
             }
             return "Le modèle n'est pas encore sûr pour les messages légitimes. Il découvre probablement de nouveaux types de contenus.";
-        }
+        },
+        formatDate() {
+        return (iso) => {
+            const d = new Date(iso);
+            const day = String(d.getDate()).padStart(2, "0");
+            const month = String(d.getMonth() + 1).padStart(2, "0");
+            const year = d.getFullYear();
+            const hours = String(d.getHours()).padStart(2, "0");
+            const minutes = String(d.getMinutes()).padStart(2, "0");
+
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
+        };
+    }
     }
 
 }
@@ -500,7 +477,8 @@ div.global-infos-graphs{
 }
 
 div.g-info-graph{
-    height: 340px;
+    height: 330px;
+    width: 60%;
     padding: 10px 20px;
 }
 div.g-info-graph h3{
@@ -511,8 +489,9 @@ div.g-info-graph-dis{
 }
 
 div.g-info-graph-evo{
-    width: 60%;
-    height: 230px;
+    /* width: 350px; */
+    height: 190px;
+
 }
 
 div#dis-per-cat,#evo-per-cat{
@@ -525,7 +504,8 @@ div#dis-per-cat,#evo-per-cat{
 
 div#gauge-confidence {
     width: 300px; 
-    height: 150px;
+    position: relative;
+    height: 120px;
     border: 1px solid #b0ccfd81;
     background-color: #F1F5FC;
     border-radius: 10px;
@@ -533,21 +513,29 @@ div#gauge-confidence {
 }
 div.confianc-infoss{
     display: flex;
-    gap: 20px;
+    gap: 50px;
+    margin-top: 20px;
+    height: 160px;
+}
+
+div.confidence-spam-ham{
+    display: flex;  
+    flex-direction: column;
+    gap: 10px;
     margin-top: 20px;
 }
 
 div.confiance-ham,div.confiance-spam{
     display: flex;
     flex-direction: column;
-    
-    height: 50px;
+     background-color: #3842b2e6; padding: 10px; border: 1px solid #b0ccfd81; border-radius: 5px;
+     color: white;
 }
 
-data.confiance-ham p,div.confiance-spam p{
+div.confiance-ham p,div.confiance-spam p{
     color: white!important;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 400;
     padding: 5px 10px;
 }
 
@@ -564,6 +552,7 @@ div.messages-and-filters{
 }
 div.message-et-info{
     width: 50%;
+    margin-top: 45px;
 }
 
 /* FILTERS */

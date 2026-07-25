@@ -79,27 +79,27 @@
             <div class="card">
                 <h4>Nom obligatoire</h4>
                 <p>Exige la saisie du nom dans le formulaire.</p>
-                <input type="checkbox" v-on:click="updateFormRequirements('surname')" v-model="formRequirements.surname">
+                <input type="checkbox" @change="updateFormRequirements('surname')" v-model="formRequirements.surname">
             </div>
             <div class="card">
                 <h4>Prenom obligatoire</h4>
                 <p>Exige la saisie du Prenom dans le formulaire.</p>
-                <input type="checkbox" v-on:click="updateFormRequirements('name')" v-model="formRequirements.name">
+                <input type="checkbox" @change="updateFormRequirements('name')" v-model="formRequirements.name">
             </div>
             <div class="card">
                 <h4>Object obligatoire</h4>
                 <p>Exige la saisie d'un objet dans le formulaire.</p>
-                <input type="checkbox" v-on:click="updateFormRequirements('subject')" v-model="formRequirements.subject">
+                <input type="checkbox" @change="updateFormRequirements('subject')" v-model="formRequirements.subject">
             </div>
             <div class="card">
                 <h4>Adresse e-mail obligatoire</h4>
                 <p>Exige la saisie d'une adresse e-mail dans le formulaire</p>
-                <input type="checkbox" v-on:click="updateFormRequirements('email')" v-model="formRequirements.email">
+                <input type="checkbox" @change="updateFormRequirements('email')" v-model="formRequirements.email">
             </div>
             <div class="card">
                 <h4>Numéro de téléphone obligatoire</h4>
                 <p>Exige la saisie d'un numéro de téléphone dans le formulaire.</p>
-                <input type="checkbox" v-on:click="updateFormRequirements('phone')" v-model="formRequirements.phone">
+                <input type="checkbox" @change="updateFormRequirements('phone')" v-model="formRequirements.phone">
             </div>
         </div>
     </section>
@@ -251,7 +251,8 @@ export default{
             api.get(`/get-champs-obligatoires-status`)
             .then(result => {
                 console.log(result)
-                this.formRequirements = result.data.form_requirements
+                Object.assign(this.formRequirements, result.data.form_requirements)
+
             })
             .catch(error => {
                 console.error(error)
@@ -296,8 +297,8 @@ export default{
         this.getAllExpressions()
         this.getAllDestinataires()
         this.getSpamshieldModelInfos()
-        // this.getAllFormRequirements()
-        // this.getSpamshieldModelInfos()
+        this.getAllFormRequirements()
+        this.getSpamshieldModelInfos()
     }
 }
  

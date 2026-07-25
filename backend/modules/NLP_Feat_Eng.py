@@ -85,11 +85,12 @@ signature_words = [
 
 
 class NLP_Feat_Eng:
-    def __init__(self, df, corpus_path="", metadata=None):
+    def __init__(self, df, corpus_path="", metadata=None, prediction_pipe=False):
         self.df = df
         self.corpus_path = corpus_path
 
         self.metadata = metadata
+        self.prediction_pipe = prediction_pipe
 
         self.urgency_words = urgency_words
         self.financial_words = financial_words
@@ -100,8 +101,6 @@ class NLP_Feat_Eng:
         self.greeting_words = greeting_words
         self.politeness_words = politeness_words
         self.signature_words = signature_words
-
-        self.prediction_pipe = False
 
         self.regex_decl = r"[\w ]\.(?!\.)"
         self.regex_interrog = r"[\w ]\?(?!\?)"
@@ -240,7 +239,7 @@ class NLP_Feat_Eng:
         self.corpus_path = self.corpus_path
 
     @monitor.calculate_func_time
-    def feature_engineering_full_pipeline(self, update_corpus=True):
+    def feature_engineering_full_pipeline(self):
         logging.info("Début du pipeline de feature engineering NLP")
 
         self.df["text"] = self.df["text"].fillna("").astype(str)
@@ -306,13 +305,17 @@ class NLP_Feat_Eng:
         if self.prediction_pipe:
             self.replace_sensitive_personal_data()
 
+        print(f'prediction_pipe = {self.prediction_pipe}')
         logging.info("Fin du pipeline de feature engineering NLP")
+        if self.prediction_pipe:
+            return self.df
 
-        if update_corpus:
+        if not self.prediction_pipe:
             logging.info("Mise à jour ou création du corpus de mots connu")
             self.update_corpus(self.corpus_path)
+            return self.df
 
-        return self.df
+        
 
     @monitor.calculate_func_time
     def message_length(self):
@@ -890,7 +893,7 @@ class NLP_Feat_Eng:
         os.makedirs(os.path.dirname(corpus_path), exist_ok=True)
 
         new_tokens = (
-            self.df["text_final"]
+            self.df["text_final"].loc[self.df['label'] == 0]
             .dropna()
             .str.split()
             .explode()

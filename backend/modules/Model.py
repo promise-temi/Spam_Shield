@@ -95,7 +95,7 @@ class Model:
         return evaluation_results
         
     def AI_full_prediction_pipeline(self, df):
-        self.features = NLP_Feat_Eng(df, self.corpus_path, self.metadata).feature_engineering_full_pipeline()
+        self.features = NLP_Feat_Eng(df, self.corpus_path, self.metadata, self.prediction_pipe).feature_engineering_full_pipeline()
         X = Preprocessing(self.features, self.artifact_path, self.prediction_pipe).preprocessing_pipeline()
         y_pred = self.predict(X)
         return y_pred

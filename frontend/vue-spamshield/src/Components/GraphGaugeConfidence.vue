@@ -10,7 +10,7 @@
 <script>
 export default {
     props: {
-        confidence: Number // valeur entre 0 et 1
+        confidence: Number
     },
     computed: {
         percent() {
@@ -34,34 +34,38 @@ export default {
 </script>
 
 <style scoped>
+/* Conteneur */
 .gauge-wrapper {
     width: 100%;
     display: flex;
     justify-content: center;
+    padding: 10px 0;
 }
 
+/* Jauge (plus grande et plus arrondie) */
 .gauge {
-    width: 160px;
-    height: 80px;
+    width: 200px;
+    height: 100px;
     background: #e6e6e6;
-    border-radius: 160px 160px 0 0;
+    border-radius: 200px 200px 0 0;
     position: relative;
     overflow: hidden;
 }
 
+/* Remplissage */
 .gauge-fill {
-    width: 160px;
-    height: 80px;
-    background: #1eae17;
+    width: 200px;
+    height: 100px;
     transform-origin: center bottom;
     transition: transform 0.6s ease, background 0.3s ease;
 }
 
+/* Couverture (fond propre, arrondi parfait) */
 .gauge-cover {
-    width: 120px;
-    height: 60px;
-    background: #F1F5FC;
-    border-radius: 120px 120px 0 0;
+    width: 150px;
+    height: 75px;
+    background: #ffffff;
+    border-radius: 150px 150px 0 0;
     position: absolute;
     bottom: 0;
     left: 50%;
@@ -69,7 +73,7 @@ export default {
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 22px;
+    font-size: 26px;
     font-weight: bold;
     color: #03005B;
 }

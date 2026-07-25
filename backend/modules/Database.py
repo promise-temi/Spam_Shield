@@ -183,38 +183,59 @@ class Postgres_DB:
         query = "SELECT * FROM messages"
         conditions = []
 
+        # -------------------------
+        # FILTRES
+        # -------------------------
         if filtrer_par == "spam":
             conditions.append("final_label = TRUE")
+
         elif filtrer_par == "ham":
             conditions.append("final_label = FALSE")
+
+        elif filtrer_par == "corriges":
+            conditions.append("is_corected = TRUE")
+
+        elif filtrer_par == "reclasses":
+            conditions.append("is_overridden = TRUE")
+
+        elif filtrer_par == "interdits":
+            conditions.append("business_rules_label = TRUE")
+
+        # Ajouter WHERE si nécessaire
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
+
+        # -------------------------
+        # TRI
+        # -------------------------
         if trier_par == "date_desc":
             query += " ORDER BY created_at DESC"
         elif trier_par == "date_asc":
             query += " ORDER BY created_at ASC"
 
+        # -------------------------
+        # EXECUTION
+        # -------------------------
         try:
             cur.execute(query)
             rows = cur.fetchall()
             selected_messages = [
                 {
                     "id": row[0],
-                    # "message": self.security_tools.decrypt_(row[2]),
-                    "metadata": self.security_tools.anonymize_metadata(json.loads(self.security_tools.decrypt_(row[3]))),
+                    "metadata": self.security_tools.anonymize_metadata(
+                        json.loads(self.security_tools.decrypt_(row[3]))
+                    ),
                     "date": row[4].isoformat(),
                     "final_label": row[8]
                 }
                 for row in rows
             ]
-            print(selected_messages)
             return selected_messages
 
         except Exception as e:
-            logging.error(
-                f"Erreur récupération messages : {e}"
-            )
+            logging.error(f"Erreur récupération messages : {e}")
             raise e
+
 
 
     

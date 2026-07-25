@@ -80,6 +80,8 @@ class Business_Rules:
             return 0 #ham
 
     def metadata_rules_pipeline(self, metadata:object):
+        logging.info(f"Metadata_Business_Rules initialized with name_presence={self.name_presence}, surname_presence={self.surname_presence}, email_presence={self.email_presence}, phone_presence={self.phone_presence}, subject_presence={self.subject_presence}, gibberish_presence={self.gibberish_presence}")
+
         print(metadata)
         self.check_name(metadata['name'])
         self.check_surname(metadata['surname'])
@@ -109,10 +111,13 @@ class Business_Rules:
     
     def check_name(self, name):
         # l'utilisateur peut vouloir que l'on verifie ce champs ou non, mais si il ny a pas de donnée qu'il ecrive no name par défaut
-        if self.name_presence:
+        if self.name_presence == True:
             if name == "" or name == False or name == None:
                 self.banned_patterns_found.append(f"le Prenomom est obligatoire mais n'a pas été renseigné.")
                 return
+        elif self.name_presence == False:
+            return
+
             
         self.gibberish(name)
 
@@ -147,10 +152,12 @@ class Business_Rules:
 
     def check_surname(self, surname):
         # l'utilisateur peut vouloir que l'on verifie ce champs ou non, mais si il ny a pas de donnée qu'il ecrive no name par défaut
-        if self.surname_presence:
+        if self.surname_presence == True:
             if surname == "" or surname == False or surname == None:
                 self.banned_patterns_found.append(f"le Nom est obligatoire mais n'a pas été renseigné.")
                 return
+        if self.surname_presence == False:
+            return
             
         self.gibberish(surname)
         df = self.feat_eng_metadata(surname).iloc[0]
@@ -183,10 +190,12 @@ class Business_Rules:
 
     def check_email(self, email):
         # l'utilisateur peut vouloir que l'on verifie ce champs ou non, mais si il ny a pas de donnée qu'il ecrive no name par défaut
-        if self.email_presence:
+        if self.email_presence == True:
             if email == "" or email == False or email == None:
                 self.banned_patterns_found.append(f"L'email est obligatoire mais n'a pas été renseigné.")
                 return
+        elif self.email_presence == False:
+            return
             
         df = self.feat_eng_metadata(email).iloc[0]
 
@@ -204,10 +213,12 @@ class Business_Rules:
 
     def check_phone(self, phone):
         # l'utilisateur peut vouloir que l'on verifie ce champs ou non, mais si il ny a pas de donnée qu'il ecrive no name par défaut
-        if self.phone_presence:
+        if self.phone_presence == True:
             if phone == "" or phone == False or phone == None:
                 self.banned_patterns_found.append(f"Le telephone est obligatoire mais n'a pas été renseigné.")
                 return
+        elif self.phone_presence == False:
+            return
             
         df = self.feat_eng_metadata(phone).iloc[0]
 
@@ -217,10 +228,12 @@ class Business_Rules:
     
     def check_subject(self, subject):
         # l'utilisateur peut vouloir que l'on verifie ce champs ou non, mais si il ny a pas de donnée qu'il ecrive no name par défaut
-        if self.subject_presence:
+        if self.subject_presence == True:
             if subject == "" or subject == False or subject == None:
                 self.banned_patterns_found.append(f"L'objet est obligatoire mais n'a pas été renseigné.")
                 return
+        elif self.subject_presence == False:
+            return
             
         df = self.feat_eng_metadata(subject).iloc[0]
 
