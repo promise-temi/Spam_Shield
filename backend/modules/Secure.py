@@ -8,7 +8,14 @@ class Security:
     def __init__(self):
         self.key = os.getenv("ENCRYPTION_KEY")
         self.fernet = Fernet(self.key.encode())
+        self.API_KEY = os.getenv("BACKEND_API_KEY")
+        if not self.API_KEY:
+            raise RuntimeError("La variable d'environnement BACKEND_API_KEY est absente.")
 
+    def verify_api_key(self, x_api_key: str) -> bool:
+        """Vérifie que la clé API transmise correspond à la clé attendue."""
+        return x_api_key == self.API_KEY
+    
     def encrypt_(self, value:str)->str:
         """ 
         Permet de chiffrer les données sensibles avec fernet, (robuste, simple et propre)

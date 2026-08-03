@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends, HTTPException, Header
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -25,15 +25,35 @@ Instrumentator().instrument(app).expose(app)
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from modules.Database import Postgres_DB
+from modules.Secure import Security
+
 # from modules.Database import JsonStockage
 # from modules.SpamshieldReport import spamshielReport
 from modules.ML_Flow import ML_Flow_Operations
 from modules.SpamShield_Operations import SpamShield_Operations
 from modules.LLModel import LLMModel
 
+
+security = Security() 
+
+def require_api_key(x_api_key: str = Header(...)):
+    if not security.verify_api_key(x_api_key):
+        raise HTTPException(status_code=401, detail="Clé API invalide ou manquante.")
+
+
+
+
+
+
+
+
+
+
+
+
 # -- ROUTES TABLEAU DE BORD --
 @app.get("/dashboard-metrics")
-def dashboard_metrics():
+def dashboard_metrics(_=Depends(require_api_key)):
     data = SpamShield_Operations().Dashbord()
     response_data = {
         "metrics" : data
@@ -42,7 +62,7 @@ def dashboard_metrics():
     
 
 @app.get("/get-messages/{trier_par}/{filtrer_par}")
-def get_all_messages(trier_par:str, filtrer_par:str)->dict:
+def get_all_messages(trier_par:str, filtrer_par:str, _=Depends(require_api_key))->dict:
     """
     Réccupération des message - Tout (par défault) ou filtré (selon filtres)
     Returns:
@@ -66,7 +86,7 @@ def get_all_messages(trier_par:str, filtrer_par:str)->dict:
     
 
 @app.get("/get_message-and-related-metrics/{selected_message_id}")
-def get_message_and_related_metrics(selected_message_id:int)->dict:
+def get_message_and_related_metrics(selected_message_id:int, _=Depends(require_api_key))->dict:
     """ 
     Réccupère le message ainsi que les metriques et informations les predictions du model ia et métier et autres
 
@@ -94,7 +114,7 @@ def get_message_and_related_metrics(selected_message_id:int)->dict:
     return JSONResponse(status_code=200, content=response_data)
 
 @app.get("/update_label/{id}")
-def update_label(id:int):
+def update_label(id:int, _=Depends(require_api_key)):
     SpamShield_Operations().Update_label(id)
     return JSONResponse(status_code=200, content={"message":"ok"})
     
@@ -119,7 +139,7 @@ class NewMessageRequest(BaseModel):
     settings: Settings
 
 @app.post("/new-message")
-async def new_message(newMessage: NewMessageRequest):
+async def new_message(newMessage: NewMessageRequest, _=Depends(require_api_key)):
 
     # Message dans un DataFrame
     message = pd.DataFrame([{'text': newMessage.message}])
@@ -138,7 +158,7 @@ async def new_message(newMessage: NewMessageRequest):
 # -- ROUTES PARAMETRES --
 
 @app.get("/get-regexes")
-def get_regexes()->dict:
+def get_regexes(_=Depends(require_api_key))->dict:
     """
     Réccupère les expression régulieres interdites
 
@@ -157,24 +177,21 @@ def get_regexes()->dict:
 class RegexRequest(BaseModel):
     pattern : str
 @app.post("/new-regex")
-async def new_regex(data: RegexRequest):
+async def new_regex(data: RegexRequest, _=Depends(require_api_key)):
     """Ajoute un expression régulieres interdite"""
     pattern = data.pattern
     SpamShield_Operations().Add_Regex_Rule(pattern)
     return JSONResponse(status_code=200, content={"message":"ok"})
 
 @app.delete("/delete-regex/{id}")
-async def delete_regex(id:int):
+async def delete_regex(id:int, _=Depends(require_api_key)):
     """Supprime une expression régulieres interdite"""
     SpamShield_Operations().Delete_Regex_Rule(id)
     return JSONResponse(status_code=200, content={"message":"ok"})
 
 
-
-
-
 @app.get("/get-detinataires")
-def get_detinataires()->dict:
+def get_detinataires(_=Depends(require_api_key))->dict:
     """
     Réccupère les destinataires
     Returns:
@@ -191,20 +208,20 @@ def get_detinataires()->dict:
 class DestinataireRequest(BaseModel):
     destinataire: str
 @app.post("/new-detinataires")
-async def new_detinataires(data: DestinataireRequest):
+async def new_detinataires(data: DestinataireRequest, _=Depends(require_api_key)):
     """Ajoute un destinataire"""
     destinataire = data.destinataire
     SpamShield_Operations().Add_Destinataire(destinataire)
     return JSONResponse(status_code=200, content={"message":"ok"})
 
 @app.delete("/delete-destinataire/{id}")
-def delete_destinataire(id:int):
+def delete_destinataire(id:int, _=Depends(require_api_key)):
     """Supprime un destinataire"""
     SpamShield_Operations().Delete_Destinataire(id)
     return JSONResponse(status_code=200, content={"message":"ok"})
  
 @app.get("/get-champs-obligatoires-status")
-def get_champs_obligatoire_status():
+def get_champs_obligatoire_status(_=Depends(require_api_key)):
     """
     Récupère le status des champs obligatoires
 
@@ -224,13 +241,13 @@ def get_champs_obligatoire_status():
     
 
 @app.put("/update-champs-obligatoires-status/{key}")
-def update_champs_obligatoire_status(key:str):
+def update_champs_obligatoire_status(key:str, _=Depends(require_api_key)):
     """met à jour le status des champs obligatoires"""
     SpamShield_Operations().Update_Form_Requirements(key)
     return JSONResponse(status_code=200, content={"message":"ok"})
 
 @app.get("/get-ai-model-infos")
-def get_ai_model_infos()->dict:
+def get_ai_model_infos(_=Depends(require_api_key))->dict:
     """Réccupère les informations associée au modele d'IA"""
     spamshield_infos = SpamShield_Operations().Current_Model_Metrics()
     response_data = {
@@ -239,15 +256,13 @@ def get_ai_model_infos()->dict:
     return JSONResponse(status_code=200, content=response_data)
     
 
-
-
 @app.get("/build_virgin_model")
-def reset_ai_model():
+def reset_ai_model(_=Depends(require_api_key)):
     """Reintilise le modèle d'ia et supprime toutes les données. Sert d'initialisation si aucun modèle existe"""
     SpamShield_Operations().virgin_model()
     return JSONResponse(status_code=200, content={"message":"ok"}) 
 
 @app.get("/llm-report")
-def get_llm_report():
+def get_llm_report(_=Depends(require_api_key)):
     report_data = LLMModel().generate_report_mistral()
     return JSONResponse(status_code=200, content=report_data)

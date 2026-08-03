@@ -1,0 +1,42 @@
+name: SpamShield CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
+
+      - name: Lancer les tests
+        run: pytest tests --junitxml=results.xml
+
+      - name: Publier les résultats de test
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: results.xml
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Construire l'image de l'API
+        run: docker build -f dockerfile.api -t spamshield-api:${{ github.sha }} .
+
+      - name: Construire l'image du scheduler
+        run: docker build -f dockerfile.scheduler -t spamshield-scheduler:${{ github.sha }} .
