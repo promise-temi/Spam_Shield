@@ -12,6 +12,7 @@ from Preprocessing import Preprocessing
 from ML_Flow import ML_Flow_Operations
 from Set_SpamShield import SET_Spam_Shield_Dependances
 
+
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -175,3 +176,5 @@ class Model:
             return pred
         else:
             return pred
+
+

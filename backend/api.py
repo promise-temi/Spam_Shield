@@ -29,7 +29,7 @@ from modules.Database import Postgres_DB
 # from modules.SpamshieldReport import spamshielReport
 from modules.ML_Flow import ML_Flow_Operations
 from modules.SpamShield_Operations import SpamShield_Operations
-from modules.Model import Model
+from modules.LLModel import LLMModel
 
 # -- ROUTES TABLEAU DE BORD --
 @app.get("/dashboard-metrics")
@@ -246,3 +246,8 @@ def reset_ai_model():
     """Reintilise le modèle d'ia et supprime toutes les données. Sert d'initialisation si aucun modèle existe"""
     SpamShield_Operations().virgin_model()
     return JSONResponse(status_code=200, content={"message":"ok"}) 
+
+@app.get("/llm-report")
+def get_llm_report():
+    report_data = LLMModel().generate_report_mistral()
+    return JSONResponse(status_code=200, content=report_data)

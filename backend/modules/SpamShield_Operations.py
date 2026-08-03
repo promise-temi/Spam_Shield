@@ -12,12 +12,14 @@ from Model import Model
 from Set_SpamShield import SET_Spam_Shield_Dependances
 from NLP_Feat_Eng import NLP_Feat_Eng
 from ML_Flow import ML_Flow_Operations
-
+from Helpers_Monitoring import Helpers_Monitoring
+monitor = Helpers_Monitoring()
 
 class SpamShield_Operations():
     def __init__(self):
         pass
-
+    
+    @monitor.calculate_func_time
     def New_Message(self, message:dict, metadata:dict):
         # Prédiction avec le modèle
         model = Model(prediction_pipe=True, metadata=metadata)
@@ -76,24 +78,29 @@ class SpamShield_Operations():
 
 
 
+    @monitor.calculate_func_time
     def Select_Message(self, id):
         selected_message = Postgres_DB().select_message(id)
         return selected_message 
     
+    @monitor.calculate_func_time
     def Show_Messages(self, trier_par, filter_par):
         messages = Postgres_DB().get_all_messages(trier_par, filter_par)
         logging.info("Récupération de tous les messages terminée avec succès.")
         return messages
 
+    @monitor.calculate_func_time
     def Dashbord(self):
         data = Postgres_DB().get_dashboard_metrics()
         return data
 
+    @monitor.calculate_func_time
     def Update_label(self, id:int):
         Postgres_DB().update_message_label(id)
         logging.info(f"Le label du message avec l'ID '{id}' a été mis à jour avec succès.")
 
 
+    @monitor.calculate_func_time
     def Retrain_All_Messages(self):
         #reccupère les messages préprocésé sous forme de liste de dictionnaire
         messages = pd.DataFrame(Postgres_DB().get_all_anonymized_messages())
@@ -102,52 +109,63 @@ class SpamShield_Operations():
         logging.info("Réentraînement du modèle terminé avec succès.")
         pass
 
+    @monitor.calculate_func_time
     def Delete_All_Messages(self):
         Postgres_DB().delete_all_messages()
         logging.info("Tous les messages ont été supprimés avec succès de la base de données.")
 
     # DESTINATAIRES
+    @monitor.calculate_func_time
     def Get_All_Destinataires(self):
         destinataires = Postgres_DB().get_prospect_mail_front()
         logging.info('Les destinataires ont été réccupérés avec succès')
         return destinataires
 
+    @monitor.calculate_func_time
     def Add_Destinataire(self, prospect:str):
         Postgres_DB().add_prospect_mail([prospect])
         logging.info(f"Le destinataire '{prospect}' a été ajoutée avec succès.")
 
+    @monitor.calculate_func_time
     def Delete_Destinataire(self, id:int):
         Postgres_DB().delete_prospect_mail([id])
         logging.info(f"Le destinataire regex avec l'ID '{id}' a été supprimée avec succès.")    
 
 
     # REGEX
+    @monitor.calculate_func_time
     def Get_All_Regex_Rules(self):
         regex_rules = Postgres_DB().get_all_regex_rules()
         return regex_rules
 
+    @monitor.calculate_func_time
     def Add_Regex_Rule(self, pattern:str):
         Postgres_DB().add_regex_rule(pattern)
         logging.info(f"La règle regex '{pattern}' a été ajoutée avec succès.")
 
+    @monitor.calculate_func_time
     def Delete_Regex_Rule(self, id:int):
         Postgres_DB().delete_regex_rule(id)
         logging.info(f"La règle regex avec l'ID '{id}' a été supprimée avec succès.")
 
     # MODEL
+    @monitor.calculate_func_time
     def virgin_model(self):
         Model().AI_full_virgin_model_training_pipeline()
 
+    @monitor.calculate_func_time
     def Current_Model_Metrics(self):
         metrics = ML_Flow_Operations().get_latest_model_metrics()
         return metrics
         
     # FORM
+    @monitor.calculate_func_time
     def Form_Requirements(self):
         path = f"{os.path.dirname(__file__)}/data/required_metadata.json"
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
-        
+
+    @monitor.calculate_func_time 
     def Update_Form_Requirements(self, key: str):
         path = f"{os.path.dirname(__file__)}/data/required_metadata.json"
 
@@ -162,6 +180,7 @@ class SpamShield_Operations():
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
 
+    @monitor.calculate_func_time
     def ML_Test_New_Message(self, message:dict, metadata:dict):
         # Prédiction avec le modèle
         model = Model(prediction_pipe=True, metadata=metadata)

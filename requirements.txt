@@ -30,3 +30,8 @@ fastapi
 uvicorn
 python-multipart
 prometheus_fastapi_instrumentator
+
+prometheus-client
+
+mistralai
+google-genai

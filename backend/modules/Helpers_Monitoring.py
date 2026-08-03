@@ -1,5 +1,31 @@
 import time
 import logging
+# from prometheus_client import Histogram
+
+# API_DURATION = Histogram(
+#     "api_duration_seconds",
+#     "Temps des routes API (fonctionalitées complètes)"
+# )
+
+# PIPELINE_DURATION = Histogram(
+#     "pipeline_duration_seconds",
+#     "Temps des pipelines"
+# )
+
+# PREPROCESSING_DURATION = Histogram(
+#     "preprocessing_duration_seconds",
+#     "Temps des methodes de proprocessing"
+# )
+
+# FEAT_ENG_DURATION = Histogram(
+#     "feat_eng_duration_seconds",
+#     "Temps des methodes de feature engineering"
+# )
+
+# MODEL_INFERANCE_DURATION = Histogram(
+#     "feat_eng_duration_seconds",
+#     "Temps des methodes de feature engineering"
+# )
 
 class Helpers_Monitoring:
     def __init__(self):

@@ -717,6 +717,7 @@ class NLP_Feat_Eng:
         """
         self.df["has_signature"] = self.df["text_lower"].str.contains(self.regex_signature, regex=True).astype(int)
     
+    @monitor.calculate_func_time
     def replace_sensitive_personal_data(self):
         if self.metadata:
             self.df['text_transformed'] = self.df['text_lower']
@@ -801,6 +802,7 @@ class NLP_Feat_Eng:
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_shortened, "[SHORTENED_URL]", regex=True)
         self.df["text_transformed"] = self.df["text_transformed"].str.replace(self.regex_url, "[URL]", regex=True)
 
+    @monitor.calculate_func_time
     def modified_word_count(self):
         """Cette méthode compte le nombre de mots modifiés dans chaque message cest a dire les mot qui contienne un caractere special ou un chiffre
         """
@@ -912,7 +914,7 @@ class NLP_Feat_Eng:
 
         df_corpus.to_parquet(corpus_path, index=False)
         
-
+    @monitor.calculate_func_time
     def feat_eng_metadata(self, text):
         df = pd.DataFrame([{"text":text}])
         tools_ = NLP_Feat_Eng(df)

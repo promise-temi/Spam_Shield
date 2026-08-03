@@ -293,7 +293,9 @@ class Postgres_DB:
                 FROM messages
                 WHERE model_label = FALSE
             """)
+
             distribution["ham_prediction_ia"] = cur.fetchone()[0]
+            metrics["ham_prediction_ia"] = distribution["ham_prediction_ia"]
 
             cur.execute("""
                 SELECT COUNT(*)
@@ -301,6 +303,7 @@ class Postgres_DB:
                 WHERE model_label = TRUE
             """)
             distribution["spam_prediction_ia"] = cur.fetchone()[0]
+            metrics["spam_prediction_ia"] = distribution["spam_prediction_ia"]
 
             cur.execute("""
                 SELECT COUNT(*)
@@ -308,13 +311,16 @@ class Postgres_DB:
                 WHERE business_rules_label = TRUE
             """)
             distribution["spam_patterns_interdits"] = cur.fetchone()[0]
+            metrics["spam_patterns_interdits"] = distribution["spam_patterns_interdits"]
 
+            
             cur.execute("""
                 SELECT COUNT(*)
                 FROM messages
                 WHERE is_overridden = TRUE
             """)
             distribution["spam_override"] = cur.fetchone()[0]
+            metrics["spam_override"] = distribution["spam_override"]
 
             cur.execute("""
                 SELECT COUNT(*)
@@ -323,6 +329,7 @@ class Postgres_DB:
                 AND final_label = FALSE
             """)
             distribution["ham_corriges"] = cur.fetchone()[0]
+            metrics["ham_corriges"] = distribution["ham_corriges"]
 
             cur.execute("""
                 SELECT COUNT(*)
@@ -331,7 +338,7 @@ class Postgres_DB:
                 AND final_label = TRUE
             """)
             distribution["spam_corriges"] = cur.fetchone()[0]
-
+            metrics["spam_corriges"] = distribution["spam_corriges"]
             # -------------------
             # Métriques IA
             # -------------------

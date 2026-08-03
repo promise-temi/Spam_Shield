@@ -96,3 +96,54 @@ class ML_Flow_Operations:
         # Toutes les métriques du run → déjà un dictionnaire
         return run.data.metrics
 
+    def log_llm_call(self, provider, model, tokens_in, tokens_out, duration, success, llm_response=None, payload=None, error=None):
+        """Journalise un appel au service de génération de rapport (Mistral/Gemini) dans MLflow."""
+        with mlflow.start_run(run_name=f"llm_report_{provider}"):
+            mlflow.set_tag("type", "llm_monitoring")
+            mlflow.set_tag("provider", provider)
+            mlflow.log_param("model", model)
+            mlflow.log_metric("tokens_input", tokens_in or 0)
+            mlflow.log_metric("tokens_output", tokens_out or 0)
+            mlflow.log_metric("duration_seconds", duration)
+            mlflow.log_metric("success", 1 if success else 0)
+
+            if llm_response:
+                mlflow.log_text(llm_response, "llm_response.txt")
+
+            if payload:
+                mlflow.log_dict(payload, "payload.json")
+
+            if error:
+                mlflow.log_param("error", str(error)[:250])
+        logging.info(f"Appel LLM loggé dans MLflow : {provider}/{model} — succès={success}")
+
+        
+    def get_llm_monitoring_summary(self, limit=20):
+        """Retourne les derniers appels LLM et un cumul par fournisseur (tokens, latence, taux d'échec)."""
+        runs = mlflow.search_runs(
+            experiment_names=["SpamShield"],
+            filter_string="tags.type = 'llm_monitoring'",
+            order_by=["start_time DESC"],
+            max_results=limit,
+        )
+        if runs.empty:
+            return {"appels": [], "resume": []}
+
+        colonnes = ["tags.provider", "params.model", "metrics.tokens_input",
+                    "metrics.tokens_output", "metrics.duration_seconds",
+                    "metrics.success", "start_time"]
+        appels = runs[colonnes].to_dict(orient="records")
+
+        resume = (
+            runs.groupby("tags.provider")
+            .agg(
+                total_appels=("metrics.success", "count"),
+                succes=("metrics.success", "sum"),
+                tokens_total=("metrics.tokens_input", "sum"),
+                latence_moyenne_s=("metrics.duration_seconds", "mean"),
+            )
+            .reset_index()
+            .to_dict(orient="records")
+        )
+
+        return {"appels": appels, "resume": resume}
