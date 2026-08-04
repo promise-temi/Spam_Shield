@@ -220,6 +220,7 @@ __marimo__/
 
 *.csv
 *.parquet
+!backend/tests/test_ressources/*.parquet
 *.complete
 /notebooks/
 

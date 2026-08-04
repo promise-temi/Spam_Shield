@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import pytest
+import pandas as pd
 from unittest.mock import mock_open
 from fastapi.testclient import TestClient
 
@@ -9,14 +10,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 os.environ.setdefault("BACKEND_API_KEY", "cle-de-test-1234")
 os.environ.setdefault("ENCRYPTION_KEY", "RxdMLSRTwGMYW6gNoAEvlWbdOHI6iDzjssyXCMMzq2I=")
+os.environ.setdefault("MISTRAL_API_KEY", "cle-mistral-factice-pour-les-tests")
 
 from api import app, require_api_key
+
+TEST_RESOURCES_DIR = os.path.join(os.path.dirname(__file__), "test_ressources")
 
 
 @pytest.fixture
 def client():
-    """Client de test avec l'authentification neutralisée : les routes se comportent
-    comme si une clé valide avait été fournie, sans dépendre de la vraie valeur en mémoire."""
     app.dependency_overrides[require_api_key] = lambda: None
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -24,31 +26,22 @@ def client():
 
 @pytest.fixture
 def client_sans_override():
-    """Client de test SANS neutraliser l'authentification, pour tester le mécanisme
-    d'authentification lui-même (401/422)."""
     return TestClient(app)
 
 
-# ---------- Configuration métier simulée ----------
+# ---------- Configuration métier simulée (fichiers texte) ----------
 
 FAKE_REQUIRED_METADATA = {
-    "name": False,
-    "surname": False,
-    "email": False,
-    "phone": False,
-    "subject": False,
-    "gibberish": False,
+    "name": False, "surname": False, "email": False,
+    "phone": False, "subject": False, "gibberish": False,
 }
+FAKE_SYSTEM_PROMPT = "Tu es SpamShield Advisor. Prompt système factice utilisé uniquement pendant les tests."
 
 
 @pytest.fixture(autouse=True)
-def mock_required_metadata_json(monkeypatch):
-    """Simule le fichier required_metadata.json pour tous les tests, sans dépendre
-    de sa présence réelle sur le disque (ni en local, ni dans le dépôt Git, ni en CI).
-
-    Seuls les appels ciblant ce fichier précis sont interceptés : tout autre appel à
-    open() passe normalement, pour ne pas casser d'autres lectures de fichiers.
-    """
+def mock_fichiers_de_configuration(monkeypatch):
+    """Simule les fichiers texte de configuration (JSON, prompt système du LLM),
+    sans dépendre de leur présence réelle sur le disque."""
     real_open = open
 
     def fake_open(file, *args, **kwargs):
@@ -57,3 +50,35 @@ def mock_required_metadata_json(monkeypatch):
         return real_open(file, *args, **kwargs)
 
     monkeypatch.setattr("builtins.open", fake_open)
+
+    from pathlib import Path
+    real_read_text = Path.read_text
+
+    def fake_read_text(self, *args, **kwargs):
+        if str(self).endswith("spamshield-advisor-system-prompt.md"):
+            return FAKE_SYSTEM_PROMPT
+        return real_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", fake_read_text)
+
+
+# ---------- Jeux de données réels, mais redirigés vers les fixtures de test ----------
+
+@pytest.fixture(autouse=True)
+def use_test_corpus(monkeypatch):
+    """Redirige toute lecture de corpus.parquet ou spam_ham_dataset.parquet vers les
+    fixtures versionnées dans tests/test_ressources/, plutôt que vers les fichiers de
+    production (non versionnés) ou un mock qui viderait le comportement réel du
+    détecteur de charabia. Le vrai code de Metadata_Business_Rules / Business_Rules
+    s'exécute donc normalement, juste avec des données de test contrôlées."""
+    real_read_parquet = pd.read_parquet
+
+    def fake_read_parquet(path, *args, **kwargs):
+        path_str = str(path)
+        if path_str.endswith("corpus.parquet"):
+            return real_read_parquet(os.path.join(TEST_RESOURCES_DIR, "corpus.parquet"), *args, **kwargs)
+        if path_str.endswith("spam_ham_dataset.parquet"):
+            return real_read_parquet(os.path.join(TEST_RESOURCES_DIR, "spam_ham_dataset.parquet"), *args, **kwargs)
+        return real_read_parquet(path, *args, **kwargs)
+
+    monkeypatch.setattr(pd, "read_parquet", fake_read_parquet)
