@@ -33,5 +33,5 @@ prometheus_fastapi_instrumentator
 
 prometheus-client
 
-mistralai
+mistralai==2.8.0
 google-genai
