@@ -1,16 +1,30 @@
 import os
 import sys
 import pytest
+from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'modules')))
+import Business_Rules as business_rules_module
 from Business_Rules import Business_Rules
 
 
 @pytest.fixture
-def business_rules(monkeypatch):
-    """Instancie Business_Rules avec toutes les vérifications de métadonnées désactivées,
-    pour isoler les tests sur la longueur et les patterns interdits."""
-    return Business_Rules(min_lenght_message=5, max_lenght_message=1000)
+def make_business_rules(monkeypatch):
+    """Fabrique de Business_Rules avec la connexion PostgreSQL toujours simulée,
+    quels que soient les paramètres passés à chaque test."""
+    fake_db = MagicMock()
+    fake_db.get_regexes_patterns.return_value = []
+    monkeypatch.setattr(business_rules_module, "Postgres_DB", lambda: fake_db)
+
+    def _make(**kwargs):
+        return Business_Rules(**kwargs)
+
+    return _make
+
+
+@pytest.fixture
+def business_rules(make_business_rules):
+    return make_business_rules(min_lenght_message=5, max_lenght_message=1000)
 
 
 def test_message_trop_court_est_detecte(business_rules):
@@ -18,8 +32,8 @@ def test_message_trop_court_est_detecte(business_rules):
     assert any("trop court" in p for p in business_rules.banned_patterns_found)
 
 
-def test_message_trop_long_est_detecte():
-    br = Business_Rules(min_lenght_message=5, max_lenght_message=10)
+def test_message_trop_long_est_detecte(make_business_rules):
+    br = make_business_rules(min_lenght_message=5, max_lenght_message=10)
     br.filter_message_lenght("un message clairement beaucoup trop long pour la limite fixée")
     assert any("trop long" in p for p in br.banned_patterns_found)
 
