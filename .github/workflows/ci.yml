@@ -37,9 +37,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Construire l'image de l'API
-        working-directory: backend
-        run: docker build -f dockerfile.api -t spamshield-api:${{ github.sha }} ..
+        run: docker build -f dockerfile.api -t spamshield-api:${{ github.sha }} .
 
       - name: Construire l'image du scheduler
-        working-directory: backend
-        run: docker build -f dockerfile.scheduler -t spamshield-scheduler:${{ github.sha }} ..
+        run: docker build -f dockerfile.scheduler -t spamshield-scheduler:${{ github.sha }} .
