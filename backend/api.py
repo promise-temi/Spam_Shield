@@ -205,6 +205,8 @@ def get_detinataires(_=Depends(require_api_key))->dict:
     }
     return JSONResponse(status_code=200, content=response_data)
 
+
+
 class DestinataireRequest(BaseModel):
     destinataire: str
 @app.post("/new-detinataires")
@@ -213,6 +215,8 @@ async def new_detinataires(data: DestinataireRequest, _=Depends(require_api_key)
     destinataire = data.destinataire
     SpamShield_Operations().Add_Destinataire(destinataire)
     return JSONResponse(status_code=200, content={"message":"ok"})
+
+
 
 @app.delete("/delete-destinataire/{id}")
 def delete_destinataire(id:int, _=Depends(require_api_key)):

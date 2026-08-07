@@ -486,3 +486,105 @@ C'est une erreur fréquente et trompeuse : dans la majorité des cas, ce n'est p
 ## Ressources
 
 - Guide de terminologie grammaticale du français, Éduscol — utilisé comme référence pour la relecture et la cohérence linguistique des contenus rédigés : https://eduscol.education.gouv.fr/sites/default/files/document/guide-la-grammaire-du-francais-terminologie-grammaticale-67998.pdf
+
+
+
+
+Configuration du service LLM
+Configuration de l'API Mistral
+
+SpamShield utilise un service d'intelligence artificielle externe afin de générer automatiquement un rapport d'interprétation des métriques du modèle de classification.
+
+Par défaut, l'application est configurée pour utiliser Mistral AI via son API officielle.
+
+Avant de démarrer l'application, il est nécessaire de créer une clé API.
+
+1. Création d'un compte
+
+Créer un compte sur le portail développeur de Mistral AI :
+
+https://console.mistral.ai/
+
+Une fois connecté, générer une nouvelle clé API depuis l'espace API Keys.
+
+2. Configuration de la variable d'environnement
+
+Pour des raisons de sécurité, la clé API ne doit jamais être enregistrée directement dans le code source.
+
+Créer une variable d'environnement :
+
+MISTRAL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxx
+
+ou renseigner cette valeur dans le fichier .env utilisé par l'application.
+
+Exemple :
+
+MISTRAL_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxx
+3. Installation des dépendances
+
+Installer les dépendances Python du projet.
+
+pip install -r requirements.txt
+
+Le SDK officiel Mistral est automatiquement installé avec les autres dépendances.
+
+4. Vérification de la configuration
+
+Au démarrage de SpamShield, le client Mistral est initialisé automatiquement à partir de la variable d'environnement.
+
+En cas de clé invalide ou absente, une exception est levée lors du premier appel au service.
+
+Les erreurs sont automatiquement enregistrées dans MLflow afin de faciliter le diagnostic.
+
+Paramétrage du modèle
+
+Le composant de génération est actuellement configuré avec les paramètres suivants.
+
+Paramètre	Valeur
+Fournisseur	Mistral AI
+Modèle	mistral-small-2603
+Température	0.3
+Format des données	JSON
+Prompt système	system_prompt.md
+
+Le prompt système est stocké dans un fichier Markdown séparé afin de pouvoir être modifié indépendamment du code.
+
+Modification du modèle
+
+L'architecture du projet permet de remplacer facilement le modèle de langage utilisé.
+
+Le modèle est défini dans le paramètre model lors de l'appel à l'API.
+
+Exemple :
+
+response = client.chat.complete(
+    model="mistral-small-2603",
+    ...
+)
+
+Pour utiliser un autre modèle compatible avec l'API Mistral, il suffit de remplacer cette valeur.
+
+Exemple :
+
+model="mistral-medium"
+
+Aucune autre modification de l'architecture n'est nécessaire.
+
+Remplacement du fournisseur
+
+L'architecture orientée objet de SpamShield isole la logique d'appel au service d'intelligence artificielle dans une classe dédiée.
+
+Cette séparation permet de remplacer ultérieurement Mistral par un autre fournisseur (OpenAI, Groq, Google AI Studio, Hugging Face, OpenRouter, etc.) sans modifier les autres composants de l'application.
+
+Seule l'implémentation de la classe responsable des appels API devra être adaptée.
+
+Vérification du fonctionnement
+
+Une génération correcte doit produire :
+
+un rapport en langage naturel ;
+une nouvelle exécution dans l'expérience LLM Monitoring de MLflow ;
+les métriques de consommation (tokens, durée) ;
+les artefacts payload.json et llm_response.txt.
+
+En cas d'échec (clé API invalide, erreur réseau, indisponibilité du fournisseur...), l'appel est enregistré dans MLflow avec les informations de diagnostic disponibles.

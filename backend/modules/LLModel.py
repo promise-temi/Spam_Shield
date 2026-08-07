@@ -1,7 +1,12 @@
 import os
 import sys
 import logging
+
 from mistralai.client import Mistral
+from dotenv import load_dotenv
+load_dotenv()
+client = Mistral(api_key=os.getenv("MISTRAL_API_KEY")) 
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
@@ -15,14 +20,10 @@ monitor = Helpers_Monitoring()
 import time
 import json
 import os
-from dotenv import load_dotenv
-load_dotenv()
 
-# Charger le prompt système une fois (au démarrage de l'app, pas à chaque appel)
+
+
 SYSTEM_PROMPT = Path(f"{os.path.dirname(__file__)}/data/spamshield-advisor-system-prompt.md").read_text(encoding="utf-8")
-
-client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))  # idéalement via une variable d'environnement
-
 
 class LLMModel:
     def __init__(self):
