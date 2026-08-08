@@ -99,7 +99,7 @@ def mock_security():
     Simule la vérification de la clé API pour tous les tests :
     la clé 'une-cle-valide' est acceptée, toute autre est refusée.
     """
-    with patch("main.security.verify_api_key") as mock_verify:
+    with patch("api.security.verify_api_key") as mock_verify:
         mock_verify.side_effect = lambda key: key == "une-cle-valide"
         yield mock_verify
 
@@ -123,7 +123,7 @@ def test_route_avec_cle_api_invalide_retourne_401():
 # /dashboard-metrics
 # ---------------------------------------------------------------------------
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_dashboard_metrics_succes(mock_ops):
     mock_ops.return_value.Dashbord.return_value = {"messages": 6, "spam": 3}
 
@@ -133,7 +133,7 @@ def test_dashboard_metrics_succes(mock_ops):
     assert response.json() == {"metrics": {"messages": 6, "spam": 3}}
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_dashboard_metrics_erreur_interne(mock_ops):
     mock_ops.return_value.Dashbord.side_effect = Exception("Connexion PostgreSQL perdue")
 
@@ -147,7 +147,7 @@ def test_dashboard_metrics_erreur_interne(mock_ops):
 # /get-messages/{trier_par}/{filtrer_par}
 # ---------------------------------------------------------------------------
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_get_all_messages_succes(mock_ops):
     mock_ops.return_value.Show_Messages.return_value = [{"id": 1, "label": "ham"}]
 
@@ -158,7 +158,7 @@ def test_get_all_messages_succes(mock_ops):
     mock_ops.return_value.Show_Messages.assert_called_once_with("date", "tous")
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_get_all_messages_erreur_interne(mock_ops):
     mock_ops.return_value.Show_Messages.side_effect = Exception("Filtre invalide")
 
@@ -171,7 +171,7 @@ def test_get_all_messages_erreur_interne(mock_ops):
 # /get_message-and-related-metrics/{selected_message_id}
 # ---------------------------------------------------------------------------
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_get_message_and_related_metrics_succes(mock_ops):
     mock_ops.return_value.Select_Message.return_value = {"id": 42, "label_final": "spam"}
 
@@ -181,7 +181,7 @@ def test_get_message_and_related_metrics_succes(mock_ops):
     assert response.json()["selected_message"]["id"] == 42
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_get_message_and_related_metrics_id_inexistant(mock_ops):
     mock_ops.return_value.Select_Message.side_effect = Exception("Message introuvable")
 
@@ -194,7 +194,7 @@ def test_get_message_and_related_metrics_id_inexistant(mock_ops):
 # /update_label/{id}
 # ---------------------------------------------------------------------------
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_update_label_succes(mock_ops):
     response = client.get("/update_label/1", headers=VALID_HEADERS)
 
@@ -203,7 +203,7 @@ def test_update_label_succes(mock_ops):
     mock_ops.return_value.Update_label.assert_called_once_with(1)
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_update_label_erreur_interne(mock_ops):
     mock_ops.return_value.Update_label.side_effect = Exception("Écriture impossible")
 
@@ -233,7 +233,7 @@ VALID_MESSAGE_PAYLOAD = {
 }
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_new_message_succes(mock_ops):
     response = client.post("/new-message", json=VALID_MESSAGE_PAYLOAD, headers=VALID_HEADERS)
 
@@ -250,7 +250,7 @@ def test_new_message_payload_invalide():
     assert response.status_code == 422  # erreur de validation Pydantic
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_new_message_erreur_interne(mock_ops):
     mock_ops.return_value.New_Message.side_effect = Exception("Échec de la classification")
 
@@ -263,7 +263,7 @@ def test_new_message_erreur_interne(mock_ops):
 # /get-regexes, /new-regex, /delete-regex/{id}
 # ---------------------------------------------------------------------------
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_get_regexes_succes(mock_ops):
     mock_ops.return_value.Get_All_Regex_Rules.return_value = ["viagra", "casino"]
 
@@ -273,7 +273,7 @@ def test_get_regexes_succes(mock_ops):
     assert response.json()["regex_rules"] == ["viagra", "casino"]
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_new_regex_succes(mock_ops):
     response = client.post("/new-regex", json={"pattern": "crypto.*gratuit"}, headers=VALID_HEADERS)
 
@@ -281,7 +281,7 @@ def test_new_regex_succes(mock_ops):
     mock_ops.return_value.Add_Regex_Rule.assert_called_once_with("crypto.*gratuit")
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_new_regex_erreur_interne(mock_ops):
     mock_ops.return_value.Add_Regex_Rule.side_effect = Exception("Regex mal formée")
 
@@ -290,7 +290,7 @@ def test_new_regex_erreur_interne(mock_ops):
     assert response.status_code == 500
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_delete_regex_succes(mock_ops):
     response = client.delete("/delete-regex/3", headers=VALID_HEADERS)
 
@@ -298,7 +298,7 @@ def test_delete_regex_succes(mock_ops):
     mock_ops.return_value.Delete_Regex_Rule.assert_called_once_with(3)
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_delete_regex_erreur_interne(mock_ops):
     mock_ops.return_value.Delete_Regex_Rule.side_effect = Exception("Règle introuvable")
 
@@ -311,7 +311,7 @@ def test_delete_regex_erreur_interne(mock_ops):
 # /get-detinataires, /new-detinataires, /delete-destinataire/{id}
 # ---------------------------------------------------------------------------
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_get_detinataires_succes(mock_ops):
     mock_ops.return_value.Get_All_Destinataires.return_value = ["contact@spamshield.fr"]
 
@@ -321,7 +321,7 @@ def test_get_detinataires_succes(mock_ops):
     assert response.json()["destinataires"] == ["contact@spamshield.fr"]
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_new_detinataires_succes(mock_ops):
     response = client.post(
         "/new-detinataires", json={"destinataire": "alerte@spamshield.fr"}, headers=VALID_HEADERS
@@ -331,7 +331,7 @@ def test_new_detinataires_succes(mock_ops):
     mock_ops.return_value.Add_Destinataire.assert_called_once_with("alerte@spamshield.fr")
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_new_detinataires_erreur_interne(mock_ops):
     mock_ops.return_value.Add_Destinataire.side_effect = Exception("Adresse déjà existante")
 
@@ -342,7 +342,7 @@ def test_new_detinataires_erreur_interne(mock_ops):
     assert response.status_code == 500
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_delete_destinataire_succes(mock_ops):
     response = client.delete("/delete-destinataire/2", headers=VALID_HEADERS)
 
@@ -350,7 +350,7 @@ def test_delete_destinataire_succes(mock_ops):
     mock_ops.return_value.Delete_Destinataire.assert_called_once_with(2)
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_delete_destinataire_erreur_interne(mock_ops):
     mock_ops.return_value.Delete_Destinataire.side_effect = Exception("Destinataire introuvable")
 
@@ -363,7 +363,7 @@ def test_delete_destinataire_erreur_interne(mock_ops):
 # /get-champs-obligatoires-status, /update-champs-obligatoires-status/{key}
 # ---------------------------------------------------------------------------
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_get_champs_obligatoire_status_succes(mock_ops):
     mock_ops.return_value.Form_Requirements.return_value = {"nom": True, "email": True}
 
@@ -373,7 +373,7 @@ def test_get_champs_obligatoire_status_succes(mock_ops):
     assert response.json()["form_requirements"]["email"] is True
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_update_champs_obligatoire_status_succes(mock_ops):
     response = client.put("/update-champs-obligatoires-status/email", headers=VALID_HEADERS)
 
@@ -381,7 +381,7 @@ def test_update_champs_obligatoire_status_succes(mock_ops):
     mock_ops.return_value.Update_Form_Requirements.assert_called_once_with("email")
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_update_champs_obligatoire_status_erreur_interne(mock_ops):
     mock_ops.return_value.Update_Form_Requirements.side_effect = Exception("Clé de champ inconnue")
 
@@ -394,7 +394,7 @@ def test_update_champs_obligatoire_status_erreur_interne(mock_ops):
 # /get-ai-model-infos
 # ---------------------------------------------------------------------------
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_get_ai_model_infos_succes(mock_ops):
     mock_ops.return_value.Current_Model_Metrics.return_value = {"accuracy": 0.94}
 
@@ -404,7 +404,7 @@ def test_get_ai_model_infos_succes(mock_ops):
     assert response.json()["spamshield_infos"]["accuracy"] == 0.94
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_get_ai_model_infos_erreur_interne(mock_ops):
     mock_ops.return_value.Current_Model_Metrics.side_effect = Exception("Aucun modèle entraîné")
 
@@ -417,7 +417,7 @@ def test_get_ai_model_infos_erreur_interne(mock_ops):
 # /build_virgin_model
 # ---------------------------------------------------------------------------
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_reset_ai_model_succes(mock_ops):
     response = client.get("/build_virgin_model", headers=VALID_HEADERS)
 
@@ -425,7 +425,7 @@ def test_reset_ai_model_succes(mock_ops):
     mock_ops.return_value.virgin_model.assert_called_once()
 
 
-@patch("main.SpamShield_Operations")
+@patch("api.SpamShield_Operations")
 def test_reset_ai_model_erreur_interne(mock_ops):
     mock_ops.return_value.virgin_model.side_effect = Exception("Réinitialisation impossible")
 
@@ -438,7 +438,7 @@ def test_reset_ai_model_erreur_interne(mock_ops):
 # /llm-report — la route testée en partie 4.7 du rapport (Swagger)
 # ---------------------------------------------------------------------------
 
-@patch("main.LLMModel")
+@patch("api.LLMModel")
 def test_llm_report_succes(mock_llm_model):
     mock_llm_model.return_value.generate_report_mistral.return_value = {
         "model_used": "mistral-small-2603",
@@ -452,7 +452,7 @@ def test_llm_report_succes(mock_llm_model):
     assert response.json()["model_used"] == "mistral-small-2603"
 
 
-@patch("main.LLMModel")
+@patch("api.LLMModel")
 def test_llm_report_cle_api_mistral_expiree(mock_llm_model):
     """
     Reproduit l'incident réel rencontré en monitorage (partie 4.6/4.8) :
