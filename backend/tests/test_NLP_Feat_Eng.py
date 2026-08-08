@@ -174,13 +174,6 @@ def test_email_count():
     result = df_result['email_count']
     assert result == 7
 
-# def test_company_email_count():
-#     df_message = pd.DataFrame([{"text": "Mon email est john.doe@example.com et dfdfdfd@dhdhdhd@ddhdh,gstsf, mais aussi jane.doe@example.org mais si vous voulez gagner de l'argent, contactez-moi à john.doe@example.xyz, aprèes il y a contact@exemple.com et support@exemple.com? noreply@test.com et noreply@testtwo.com"}])
-#     nlp_feat_eng = NLP_Feat_Eng(df_message)
-#     nlp_feat_eng.company_email_count()
-#     df_result = nlp_feat_eng.df.iloc[0]
-#     result = df_result['company_email_count']
-#     assert result == 6
 
 def test_contact_email_count():
     df_message = pd.DataFrame([{"text": "Mon email est john.doe@example.com et dfdfdfd@dhdhdhd@ddhdh,gstsf, mais aussi jane.doe@example.org mais si vous voulez gagner de l'argent, contactez-moi à john.doe@example.xyz, aprèes il y a contact@exemple.com et support@exemple.com? noreply@test.com et noreply@testtwo.com"}])
@@ -213,10 +206,6 @@ def test_suspect_email_count():
     df_result = nlp_feat_eng.df.iloc[0]
     result = df_result['suspect_email_count']
     assert result == 1
-
-# self.special_character_count()
-#         self.line_break_count()
-#         self.tab_count()
 
 def test_special_character_count():
     df_message = pd.DataFrame([{"text": "Mon email est john.doe@example.com et dfdfdfd@dhdhdhd@ddhdh,gstsf, mais aussi jane.doe@example.org mais si vous voulez gagner de l'argent, contactez-moi à john.doe@example.xyz, aprèes il y a contact@exemple.com et('-è_-(_)) support@exemple.com? noreply@test.com et noreply@testtwo.com"}])
