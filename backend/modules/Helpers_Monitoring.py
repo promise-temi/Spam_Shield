@@ -2,6 +2,8 @@ import time
 import logging
 from prometheus_client import Histogram, Counter
 
+# Nombre de prédictions effectctuées
+
 # ---------- Latence (couvre tout ce qui est déjà décoré par calculate_func_time) ----------
 FUNCTION_DURATION = Histogram(
     "spamshield_function_duration_seconds",

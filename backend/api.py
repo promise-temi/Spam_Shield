@@ -25,12 +25,7 @@ Instrumentator().instrument(app).expose(app)
 
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
-from modules.Database import Postgres_DB
 from modules.Secure import Security
-
-# from modules.Database import JsonStockage
-# from modules.SpamshieldReport import spamshielReport
-from modules.ML_Flow import ML_Flow_Operations
 from modules.SpamShield_Operations import SpamShield_Operations
 from modules.LLModel import LLMModel
 
@@ -40,19 +35,8 @@ security = Security()
 def require_api_key(x_api_key: str = Header(...)):
     if not security.verify_api_key(x_api_key):
         raise HTTPException(status_code=401, detail="Clé API invalide ou manquante.")
-
-
-
-
-
-
-
-
-
-
-
-
-# -- ROUTES TABLEAU DE BORD --
+    
+SpamShield_Operations().check_model_existence()
 
 # -- ROUTES TABLEAU DE BORD --
 @app.get("/dashboard-metrics")

@@ -196,6 +196,16 @@ class SpamShield_Operations():
 
         return final_label
 
+    def check_model_existence(self):
+        """Vérifie si un modèle existe dans ML Flow. Si aucun modèle n'existe, il entraîne un modèle vierge."""
+        latest_model = ML_Flow_Operations().get_latest_model()
+        if latest_model is None:
+            logging.info("Aucun modèle existant trouvé dans ML Flow. Entraînement d'un modèle vierge.")
+            self.virgin_model()
+        else:
+            logging.info("Un modèle existant a été trouvé dans ML Flow. Aucun entraînement nécessaire.")
+            
+
 
 
 
