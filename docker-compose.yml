@@ -20,6 +20,13 @@ services:
     depends_on:
       - postgres
 
+  frontend:
+    build:
+      context: .
+      dockerfile: dockerfile.frontend
+    depends_on:
+      - api
+
   postgres:
     image: postgres:17
     environment:

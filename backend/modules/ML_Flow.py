@@ -4,7 +4,7 @@ from mlflow.tracking import MlflowClient
 import logging
 import os
 
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
+MLFLOW_TRACKING_URI = os.getenv("http://mlflow:5000", "http://127.0.0.1:5000")
 MLFLOW_EXPERIMENT_NAME = "SpamShield"
 
 _mlflow_configured = False
