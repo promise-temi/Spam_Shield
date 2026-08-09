@@ -14,12 +14,15 @@ mlflow ui --host 0.0.0.0 --port 5000
 gmail:
 Mots de passe des applications
 
+docker-compose -f docker-compose.dev.yml up --build
 
 creer une clé d'encryption:
 from cryptography.fernet import Fernet
 key = Fernet.generate_key()
 print(key.decode())
 
+grafana
+http://localhost:3000
 
 docker compose exec postgres psql -U postgres -d spamshield
 

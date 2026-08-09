@@ -4,39 +4,63 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 import pandas as pd
-
-import os 
+import os
 import sys
 import logging
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"], # autorise toutes les origines (localhost, 127.0.0.1, etc.)
-    allow_credentials=True,
-    allow_methods=["*"],          # GET, POST, PUT, DELETE
-    allow_headers=["*"],          # Autorise tous les headers
-)
-
-from prometheus_fastapi_instrumentator import Instrumentator
-
-Instrumentator().instrument(app).expose(app)
-
-
+# 1. imports modules en premier
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from modules.Secure import Security
 from modules.SpamShield_Operations import SpamShield_Operations
 from modules.LLModel import LLMModel
+from modules.Helpers_Monitoring import Helpers_Monitoring
 
+# 2. instances
+monitor = Helpers_Monitoring()
+security = Security()
 
-security = Security() 
+# 3. app
+app = FastAPI()
 
+# 4. middlewares
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.middleware("http")
+async def monitoring_middleware(request: Request, call_next):
+    response = await call_next(request)
+    if response.status_code == 401:
+        monitor.record_unauthorized_attempt(
+            endpoint=request.url.path,
+            method=request.method
+        )
+    if response.status_code >= 400:
+        monitor.record_http_error(
+            endpoint=request.url.path,
+            method=request.method,
+            status_code=response.status_code
+        )
+    return response
+
+# 5. Instrumentator
+from prometheus_fastapi_instrumentator import Instrumentator
+Instrumentator().instrument(app).expose(app)
+
+# 6. auth + init modèle
 def require_api_key(x_api_key: str = Header(...)):
     if not security.verify_api_key(x_api_key):
         raise HTTPException(status_code=401, detail="Clé API invalide ou manquante.")
-    
+
 SpamShield_Operations().check_model_existence()
+
+
 
 # -- ROUTES TABLEAU DE BORD --
 @app.get("/dashboard-metrics")

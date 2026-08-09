@@ -8,8 +8,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - postgres
-      - mlflow
+      postgres:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
 
   scheduler:
     build:
@@ -18,7 +20,17 @@ services:
     env_file:
       - .env
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend/vue-spamshield
+      dockerfile: dockerfile.frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
 
   postgres:
     image: postgres:17
@@ -26,10 +38,16 @@ services:
       POSTGRES_DB: ${DB_DATABASE}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:  
+    ports:
       - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_DATABASE}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   mlflow:
     image: ghcr.io/mlflow/mlflow:latest
@@ -40,7 +58,13 @@ services:
     ports:
       - "5000:5000"
     volumes:
-        - mlflow_data:/mlruns
+      - mlflow_data:/mlruns
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   prometheus:
     image: prom/prometheus
@@ -49,12 +73,13 @@ services:
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
+
   grafana:
     image: grafana/grafana
     ports:
       - "3000:3000"
     depends_on:
-        - prometheus
+      - prometheus
     volumes:
       - grafana_data:/var/lib/grafana
 
