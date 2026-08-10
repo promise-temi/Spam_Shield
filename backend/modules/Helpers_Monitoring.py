@@ -1,51 +1,65 @@
 import time
 import logging
-from prometheus_client import Histogram, Counter
+from prometheus_client import Histogram, Counter, REGISTRY
 
-FUNCTION_DURATION = Histogram(
+def _get_or_create(cls, name, doc, labelnames=[], **kwargs):
+    """Récupère une métrique existante ou en crée une nouvelle — évite le crash au reload uvicorn."""
+    if name in REGISTRY._names_to_collectors:
+        return REGISTRY._names_to_collectors[name]
+    return cls(name, doc, labelnames, **kwargs)
+
+FUNCTION_DURATION = _get_or_create(
+    Histogram,
     "spamshield_function_duration_seconds",
     "Temps d'exécution des fonctions instrumentées par le décorateur calculate_func_time",
     ["function_name"],
 )
 
-FUNCTION_RESULT = Counter(
+FUNCTION_RESULT = _get_or_create(
+    Counter,
     "spamshield_function_result_total",
     "Résultat d'exécution des fonctions",
     ["pipe_type", "function_name", "status", "error_type"],
 )
 
-PREDICTION_COUNTER = Counter(
+PREDICTION_COUNTER = _get_or_create(
+    Counter,
     "spamshield_predictions_total",
     "Nombre de prédictions effectuées",
     ["final_label", "model_pred", "business_rules_triggered", "is_overridden"]
 )
 
-CONFIDENCE_HISTOGRAM = Histogram(
+CONFIDENCE_HISTOGRAM = _get_or_create(
+    Histogram,
     "spamshield_confidence_score",
     "Distribution du score de confiance du modèle",
     ["final_label"],
     buckets=[0.5, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 0.99]
 )
 
-GIBBERISH_SCORE_HISTOGRAM = Histogram(
+GIBBERISH_SCORE_HISTOGRAM = _get_or_create(
+    Histogram,
     "spamshield_gibberish_score",
     "Distribution du score de charabia détecté par les règles métier",
     buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 )
 
-BANNED_PATTERNS_COUNTER = Counter(
+BANNED_PATTERNS_COUNTER = _get_or_create(
+    Counter,
     "spamshield_banned_patterns_total",
     "Patterns interdits et anomalies détectés par les règles métier",
     ["anomaly_type"]
 )
 
-HTTP_ERRORS_COUNTER = Counter(
+HTTP_ERRORS_COUNTER = _get_or_create(
+    Counter,
     "spamshield_http_errors_total",
     "Erreurs HTTP par endpoint et code de statut",
     ["endpoint", "method", "status_code"]
 )
 
-UNAUTHORIZED_COUNTER = Counter(
+UNAUTHORIZED_COUNTER = _get_or_create(
+    Counter,
     "spamshield_unauthorized_attempts_total",
     "Tentatives d'accès non autorisées (clé API invalide ou manquante)",
     ["endpoint", "method"]
