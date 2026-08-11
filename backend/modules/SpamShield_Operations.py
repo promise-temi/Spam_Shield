@@ -256,9 +256,9 @@ class SpamShield_Operations():
             monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Get Form Requirements", status="failure", error_type=e)
 
      
-    def Update_Form_Requirements(self, key: str):
+    def Update_Form_Requirements(self, key: str, path: str = f"{os.path.dirname(__file__)}/data/required_metadata.json"):
         try:
-            path = f"{os.path.dirname(__file__)}/data/required_metadata.json"
+            path = path
 
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)

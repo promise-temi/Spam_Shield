@@ -74,8 +74,7 @@ class Preprocessing:
         
         return self.X_train_combined, self.X_test_combined, self.y_train, self.y_test, self.sample_weight_train, self.sample_weight_test
 
-
-    @monitor.calculate_func_time
+    
     def remove_stopwords(self, text):
         words = text.split()
         filtered_words = []
@@ -92,7 +91,7 @@ class Preprocessing:
 
         return " ".join(filtered_words)
     
-    @monitor.calculate_func_time
+    
     def clean_stopwords(self):
         """Cette méthode nettoie les stop words d'un texte donné.
         Elle utilise la méthode remove_stopwords pour retirer les stop words
@@ -100,7 +99,7 @@ class Preprocessing:
         """
         self.df["text_preprocessed"] = self.df["text_preprocessed"].apply(self.remove_stopwords)
 
-    @monitor.calculate_func_time
+    
     def stem_text(self, text):
         words = text.split()
 
@@ -118,7 +117,7 @@ class Preprocessing:
         return " ".join(stemmed_words)
     
     
-    @monitor.calculate_func_time
+    
     def apply_stemming(self):
         """Cette méthode applique la racinisation (stemming) à un texte donné.
         Elle utilise la méthode stem_text pour transformer les mots en leurs racines
@@ -126,17 +125,17 @@ class Preprocessing:
         """
         self.df["text_preprocessed"] = self.df["text_preprocessed"].apply(self.stem_text)
 
-    @monitor.calculate_func_time
+    
     def normalize_tokens(self, text):
         return re.sub(r"\[([a-zA-Z]+)\]", lambda m: "[" + m.group(1).upper() + "]", text)
 
-    @monitor.calculate_func_time
+    
     def space_tokens(self, text):
         text = re.sub(r"(\[[A-Z]+\])", r" \1 ", text)
         text = re.sub(r"\s+", " ", text).strip()
         return text
     
-    @monitor.calculate_func_time
+    
     def normalize_and_space_tokens(self):
         """Cette méthode normalise et espace les tokens d'un texte donné.
         Elle utilise les méthodes normalize_tokens et space_tokens pour transformer
@@ -145,7 +144,7 @@ class Preprocessing:
         self.df['text_preprocessed'] = self.df['text_preprocessed'].apply(self.normalize_tokens)
         self.df['text_preprocessed'] = self.df['text_preprocessed'].apply(self.space_tokens)
 
-    @monitor.calculate_func_time 
+     
     def relace_inf_with_zero(self):
         """Cette méthode remplace les valeurs infinies et NaN dans le DataFrame par des zéros.
         Elle utilise la méthode replace de pandas pour effectuer cette transformation
@@ -153,7 +152,7 @@ class Preprocessing:
         """
         self.df = self.df.replace([np.inf, -np.inf], np.nan).fillna(0)
 
-    @monitor.calculate_func_time
+    
     def drop_duplicates_(self):
         """Cette méthode supprime les doublons du DataFrame.
         Elle utilise la méthode drop_duplicates de pandas pour éliminer les lignes en double
@@ -161,7 +160,7 @@ class Preprocessing:
         """
         self.df = self.df.drop_duplicates(subset=["text_preprocessed"], keep="first").reset_index(drop=True)
 
-    @monitor.calculate_func_time
+    
     def delete_memory_data(self):
         memory_path = f"{self.artifact_path}/memory_df.parquet"
 
@@ -171,7 +170,7 @@ class Preprocessing:
         else:
             logging.info("Aucun fichier mémoire à supprimer.")
 
-    @monitor.calculate_func_time
+    
     def memory_data(self):
         
         if self.prediction_pipe:
@@ -207,7 +206,7 @@ class Preprocessing:
 
 
 
-    @monitor.calculate_func_time
+    
     def split_for_prediction(self):
         feature_cols = [col for col in self.df.columns if col not in self.exclude_cols]
 
@@ -221,7 +220,7 @@ class Preprocessing:
             self.X_num_train = self.X_num
             
 
-    @monitor.calculate_func_time
+    
     def train_test_split(self, test_size=0.2, random_state=42):
         """Cette méthode divise le DataFrame en ensembles d'entraînement et de test.
         Elle utilise la fonction train_test_split de scikit-learn pour effectuer cette division
@@ -254,7 +253,7 @@ class Preprocessing:
 
 
     
-    @monitor.calculate_func_time
+    
     def tfidf_vectorization(self, artifact_path):
         """Cette méthode applique la vectorisation TF-IDF aux textes d'entraînement et de test.
         Elle utilise la classe TfidfVectorizer de scikit-learn pour transformer les textes en matrices de caractéristiques
@@ -275,7 +274,7 @@ class Preprocessing:
             self.X_text_train_tfidf = vectorizer.transform(self.X_text_train)
 
 
-    @monitor.calculate_func_time      
+          
     def dimension_reduction_truncated_SVD(self, artifact_path):
         if not self.prediction_pipe:
             svd = TruncatedSVD(
@@ -297,7 +296,7 @@ class Preprocessing:
             self.X_text_train_svd = svd.transform(self.X_text_train_tfidf)
             
 
-    @monitor.calculate_func_time
+    
     def robust_scale_numeric_features(self, artifact_path):
         """Cette méthode applique la normalisation robuste aux caractéristiques numériques d'entraînement et de test.
         Elle utilise la classe RobustScaler de scikit-learn pour transformer les caractéristiques numériques
@@ -317,7 +316,7 @@ class Preprocessing:
             scaler = joblib.load(f"{artifact_path}/robust_scaler.pkl")
             self.X_num_train_scaled = scaler.transform(self.X_num_train)
 
-    @monitor.calculate_func_time
+    
     def dimension_reduction_pca(self, artifact_path, explained_variance=0.99):
         """
         Réduit les dimensions des features numériques en conservant un pourcentage
@@ -349,7 +348,7 @@ class Preprocessing:
 
             self.X_num_train_pca = pca.transform(self.X_num_train_scaled)
             
-    @monitor.calculate_func_time
+    
     def hsstack_features(self):
         """Cette méthode combine les caractéristiques textuelles vectorisées et les caractéristiques numériques normalisées.
         Elle utilise la fonction hstack de scipy pour empiler horizontalement les matrices de caractéristiques
@@ -362,7 +361,7 @@ class Preprocessing:
         if self.prediction_pipe:
             self.X_train_combined = hstack([self.X_text_train_svd, self.X_num_train_pca])
 
-    @monitor.calculate_func_time
+    
     def np_hsstack_features(self):
         if not self.prediction_pipe:
             self.X_train_combined = np.hstack([
