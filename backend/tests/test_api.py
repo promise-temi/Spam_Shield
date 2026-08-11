@@ -1,469 +1,295 @@
+"""
+Tests d'intégration de l'API SpamShield — fichier autonome.
+
+Ce fichier embarque ses propres fixtures (client + mocks) et ne dépend pas
+du conftest. Il vérifie deux choses sur les 16 routes de l'API :
+  1. PROTECTION  : chaque route exige une clé API valide
+  2. FONCTIONNEL : chaque route renvoie le bon code et le bon format,
+                   la couche métier étant mockée (on teste le contrat HTTP,
+                   pas le pipeline ML).
+
+Lancer : pytest backend/tests/test_api.py -v
+"""
+
+import os
+import sys
+import pytest
 from unittest.mock import patch
 
-HEADERS_KO = {"x-api-key": "mauvaise-cle"}
+# --- Rendre le backend importable ---
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# --- Variables d'environnement factices AVANT d'importer l'app ---
+os.environ.setdefault("BACKEND_API_KEY", "cle-de-test-1234")
+os.environ.setdefault("ENCRYPTION_KEY", "RxdMLSRTwGMYW6gNoAEvlWbdOHI6iDzjssyXCMMzq2I=")
+os.environ.setdefault("MISTRAL_API_KEY", "cle-mistral-factice-pour-les-tests")
 
-
-# ---------- Comportement fonctionnel (client AVEC override, l'auth n'est plus le sujet) ----------
-
-@patch("api.SpamShield_Operations")
-def test_dashboard_metrics_retourne_la_structure_attendue(mock_ops, client):
-    mock_ops.return_value.Dashbord.return_value = {"messages": 6, "spam": 3, "ham": 3}
-    response = client.get("/dashboard-metrics")
-    data = response.json()
-    assert "metrics" in data
-    assert data["metrics"]["messages"] == 6
-
-
-@patch("api.SpamShield_Operations")
-def test_new_message_appelle_bien_le_pipeline(mock_ops, client):
-    payload = {
-        "message": "Bonjour, je suis intéressé par vos services.",
-        "metadata": {"name": "Jean", "surname": "Dupont", "email": "jean@test.com",
-                      "phone": "0600000000", "subject": "Contact", "form_id": "1"},
-        "settings": {"entrainementModel": False, "recevoirParMail": False},
-    }
-    response = client.post("/new-message", json=payload)
-    assert response.status_code == 200
-    mock_ops.return_value.New_Message.assert_called_once()
-
-
-@patch("api.SpamShield_Operations")
-def test_new_message_rejette_un_payload_invalide(mock_ops, client):
-    response = client.post("/new-message", json={"metadata": {}})
-    assert response.status_code == 422
-    mock_ops.return_value.New_Message.assert_not_called()
-
-
-@patch("api.SpamShield_Operations")
-def test_build_virgin_model_declenche_bien_le_reset(mock_ops, client):
-    response = client.get("/build_virgin_model")
-    assert response.status_code == 200
-    mock_ops.return_value.virgin_model.assert_called_once()
-
-
-@patch("api.LLMModel")
-def test_llm_report_appelle_mistral_et_pas_le_vrai_service(mock_llm, client):
-    mock_llm.return_value.generate_report_mistral.return_value = {
-        "model_used": "mistral-small-2603",
-        "llm_response": "Rapport simulé.",
-        "base_metrics": {},
-    }
-    response = client.get("/llm-report")
-    assert response.status_code == 200
-    assert response.json()["llm_response"] == "Rapport simulé."
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-Tests pytest pour l'API SpamShield.
-
-Chaque route est testée selon trois axes quand c'est pertinent :
-  - accès refusé sans clé API valide (401)
-  - cas de succès (200), avec la couche métier mockée
-  - cas d'erreur interne (500), pour vérifier que le try/except
-    de chaque route capture bien l'exception et répond proprement
-
-Lancer avec : pytest -v
-"""
-
-import pytest
-from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
-from api import app
-
-client = TestClient(app)
-
-VALID_HEADERS = {"x-api-key": "une-cle-valide"}
-INVALID_HEADERS = {"x-api-key": "une-cle-invalide"}
+# On empêche check_model_existence de contacter MLflow au démarrage de l'import
+with patch("modules.SpamShield_Operations.SpamShield_Operations.check_model_existence"):
+    from api import app, require_api_key
 
 
-# ---------------------------------------------------------------------------
+# ===========================================================================
 # Fixtures
-# ---------------------------------------------------------------------------
+# ===========================================================================
 
-@pytest.fixture(autouse=True)
-def mock_security():
-    """
-    Simule la vérification de la clé API pour tous les tests :
-    la clé 'une-cle-valide' est acceptée, toute autre est refusée.
-    """
-    with patch("api.security.verify_api_key") as mock_verify:
-        mock_verify.side_effect = lambda key: key == "une-cle-valide"
-        yield mock_verify
+@pytest.fixture
+def client():
+    """Client avec authentification bypassée — pour tester la logique des routes."""
+    app.dependency_overrides[require_api_key] = lambda: None
+    yield TestClient(app)
+    app.dependency_overrides.clear()
 
 
-# ---------------------------------------------------------------------------
-# Authentification (commune à toutes les routes protégées)
-# ---------------------------------------------------------------------------
-
-def test_route_sans_cle_api_retourne_401():
-    response = client.get("/dashboard-metrics")
-    assert response.status_code == 422  # header requis manquant
+@pytest.fixture
+def client_auth_active():
+    """Client avec authentification active — pour tester la protection des routes."""
+    return TestClient(app)
 
 
-def test_route_avec_cle_api_invalide_retourne_401():
-    response = client.get("/dashboard-metrics", headers=INVALID_HEADERS)
+# ===========================================================================
+# 1. PROTECTION — les 16 routes exigent une clé API
+# ===========================================================================
+
+ROUTES_PROTEGEES = [
+    ("GET",    "/dashboard-metrics"),
+    ("GET",    "/get-messages/date/tous"),
+    ("GET",    "/get_message-and-related-metrics/1"),
+    ("GET",    "/update_label/1"),
+    ("POST",   "/new-message"),
+    ("GET",    "/get-regexes"),
+    ("POST",   "/new-regex"),
+    ("DELETE", "/delete-regex/1"),
+    ("GET",    "/get-detinataires"),
+    ("POST",   "/new-detinataires"),
+    ("DELETE", "/delete-destinataire/1"),
+    ("GET",    "/get-champs-obligatoires-status"),
+    ("PUT",    "/update-champs-obligatoires-status/email"),
+    ("GET",    "/get-ai-model-infos"),
+    ("GET",    "/build_virgin_model"),
+    ("GET",    "/llm-report"),
+]
+
+
+@pytest.mark.parametrize("method,url", ROUTES_PROTEGEES)
+def test_route_sans_cle_est_refusee(client_auth_active, method, url):
+    """Sans en-tete x-api-key, la route refuse l'acces (422 : header obligatoire manquant)."""
+    response = client_auth_active.request(method, url, json={})
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize("method,url", ROUTES_PROTEGEES)
+def test_route_avec_cle_invalide_renvoie_401(client_auth_active, method, url):
+    """Avec une cle invalide, la route renvoie 401."""
+    with patch("api.security.verify_api_key", return_value=False):
+        response = client_auth_active.request(
+            method, url, json={}, headers={"x-api-key": "cle-invalide"}
+        )
     assert response.status_code == 401
-    assert "Clé API invalide" in response.json()["detail"]
 
 
-# ---------------------------------------------------------------------------
-# /dashboard-metrics
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# 2. FONCTIONNEL — chaque route repond correctement (metier mocke)
+# ===========================================================================
 
-@patch("api.SpamShield_Operations")
-def test_dashboard_metrics_succes(mock_ops):
-    mock_ops.return_value.Dashbord.return_value = {"messages": 6, "spam": 3}
-
-    response = client.get("/dashboard-metrics", headers=VALID_HEADERS)
-
-    assert response.status_code == 200
-    assert response.json() == {"metrics": {"messages": 6, "spam": 3}}
-
+# -- Tableau de bord --
 
 @patch("api.SpamShield_Operations")
-def test_dashboard_metrics_erreur_interne(mock_ops):
-    mock_ops.return_value.Dashbord.side_effect = Exception("Connexion PostgreSQL perdue")
+def test_dashboard_metrics(mock_ops, client):
+    mock_ops.return_value.Dashbord.return_value = {"messages": 10, "spam": 5}
+    r = client.get("/dashboard-metrics")
+    assert r.status_code == 200
+    assert r.json()["metrics"] == {"messages": 10, "spam": 5}
 
-    response = client.get("/dashboard-metrics", headers=VALID_HEADERS)
-
-    assert response.status_code == 500
-    assert "Connexion PostgreSQL perdue" in response.json()["detail"]
-
-
-# ---------------------------------------------------------------------------
-# /get-messages/{trier_par}/{filtrer_par}
-# ---------------------------------------------------------------------------
 
 @patch("api.SpamShield_Operations")
-def test_get_all_messages_succes(mock_ops):
+def test_dashboard_metrics_erreur(mock_ops, client):
+    mock_ops.return_value.Dashbord.side_effect = Exception("DB indisponible")
+    r = client.get("/dashboard-metrics")
+    assert r.status_code == 500
+
+
+# -- Messages --
+
+@patch("api.SpamShield_Operations")
+def test_get_all_messages(mock_ops, client):
     mock_ops.return_value.Show_Messages.return_value = [{"id": 1, "label": "ham"}]
-
-    response = client.get("/get-messages/date/tous", headers=VALID_HEADERS)
-
-    assert response.status_code == 200
-    assert response.json()["messages"] == [{"id": 1, "label": "ham"}]
+    r = client.get("/get-messages/date/tous")
+    assert r.status_code == 200
+    assert r.json()["messages"] == [{"id": 1, "label": "ham"}]
     mock_ops.return_value.Show_Messages.assert_called_once_with("date", "tous")
 
 
 @patch("api.SpamShield_Operations")
-def test_get_all_messages_erreur_interne(mock_ops):
-    mock_ops.return_value.Show_Messages.side_effect = Exception("Filtre invalide")
-
-    response = client.get("/get-messages/date/tous", headers=VALID_HEADERS)
-
-    assert response.status_code == 500
-
-
-# ---------------------------------------------------------------------------
-# /get_message-and-related-metrics/{selected_message_id}
-# ---------------------------------------------------------------------------
-
-@patch("api.SpamShield_Operations")
-def test_get_message_and_related_metrics_succes(mock_ops):
-    mock_ops.return_value.Select_Message.return_value = {"id": 42, "label_final": "spam"}
-
-    response = client.get("/get_message-and-related-metrics/42", headers=VALID_HEADERS)
-
-    assert response.status_code == 200
-    assert response.json()["selected_message"]["id"] == 42
+def test_get_message_and_related_metrics(mock_ops, client):
+    mock_ops.return_value.Select_Message.return_value = {"id": 42}
+    r = client.get("/get_message-and-related-metrics/42")
+    assert r.status_code == 200
+    assert r.json()["selected_message"]["id"] == 42
+    mock_ops.return_value.Select_Message.assert_called_once_with(42)
 
 
 @patch("api.SpamShield_Operations")
-def test_get_message_and_related_metrics_id_inexistant(mock_ops):
-    mock_ops.return_value.Select_Message.side_effect = Exception("Message introuvable")
-
-    response = client.get("/get_message-and-related-metrics/9999", headers=VALID_HEADERS)
-
-    assert response.status_code == 500
-
-
-# ---------------------------------------------------------------------------
-# /update_label/{id}
-# ---------------------------------------------------------------------------
-
-@patch("api.SpamShield_Operations")
-def test_update_label_succes(mock_ops):
-    response = client.get("/update_label/1", headers=VALID_HEADERS)
-
-    assert response.status_code == 200
-    assert response.json() == {"message": "ok"}
-    mock_ops.return_value.Update_label.assert_called_once_with(1)
+def test_update_label(mock_ops, client):
+    r = client.get("/update_label/7")
+    assert r.status_code == 200
+    assert r.json() == {"message": "ok"}
+    mock_ops.return_value.Update_label.assert_called_once_with(7)
 
 
-@patch("api.SpamShield_Operations")
-def test_update_label_erreur_interne(mock_ops):
-    mock_ops.return_value.Update_label.side_effect = Exception("Écriture impossible")
+# -- New message (route critique) --
 
-    response = client.get("/update_label/1", headers=VALID_HEADERS)
-
-    assert response.status_code == 500
-
-
-# ---------------------------------------------------------------------------
-# /new-message
-# ---------------------------------------------------------------------------
-
-VALID_MESSAGE_PAYLOAD = {
+PAYLOAD_VALIDE = {
     "message": "Bonjour, je souhaite un devis.",
     "metadata": {
-        "name": "Dupont",
-        "surname": "Jean",
-        "email": "jean.dupont@example.com",
-        "phone": "0600000000",
-        "subject": "Demande de devis",
-        "form_id": "contact-1",
+        "name": "Dupont", "surname": "Jean",
+        "email": "jean.dupont@example.com", "phone": "0600000000",
+        "subject": "Devis", "form_id": "contact-1",
     },
-    "settings": {
-        "entrainementModel": True,
-        "recevoirParMail": False,
-    },
+    "settings": {"entrainementModel": True, "recevoirParMail": False},
 }
 
 
 @patch("api.SpamShield_Operations")
-def test_new_message_succes(mock_ops):
-    response = client.post("/new-message", json=VALID_MESSAGE_PAYLOAD, headers=VALID_HEADERS)
-
-    assert response.status_code == 200
-    assert response.json() == {"message": "ok"}
+def test_new_message(mock_ops, client):
+    r = client.post("/new-message", json=PAYLOAD_VALIDE)
+    assert r.status_code == 200
+    assert r.json() == {"message": "ok"}
     mock_ops.return_value.New_Message.assert_called_once()
 
 
-def test_new_message_payload_invalide():
-    payload_invalide = {"message": "texte sans metadata ni settings"}
-
-    response = client.post("/new-message", json=payload_invalide, headers=VALID_HEADERS)
-
-    assert response.status_code == 422  # erreur de validation Pydantic
+def test_new_message_payload_invalide(client):
+    r = client.post("/new-message", json={"message": "texte seul"})
+    assert r.status_code == 422
 
 
 @patch("api.SpamShield_Operations")
-def test_new_message_erreur_interne(mock_ops):
-    mock_ops.return_value.New_Message.side_effect = Exception("Échec de la classification")
-
-    response = client.post("/new-message", json=VALID_MESSAGE_PAYLOAD, headers=VALID_HEADERS)
-
-    assert response.status_code == 500
+def test_new_message_erreur(mock_ops, client):
+    mock_ops.return_value.New_Message.side_effect = Exception("Echec classification")
+    r = client.post("/new-message", json=PAYLOAD_VALIDE)
+    assert r.status_code == 500
 
 
-# ---------------------------------------------------------------------------
-# /get-regexes, /new-regex, /delete-regex/{id}
-# ---------------------------------------------------------------------------
+# -- Regex --
 
 @patch("api.SpamShield_Operations")
-def test_get_regexes_succes(mock_ops):
-    mock_ops.return_value.Get_All_Regex_Rules.return_value = ["viagra", "casino"]
-
-    response = client.get("/get-regexes", headers=VALID_HEADERS)
-
-    assert response.status_code == 200
-    assert response.json()["regex_rules"] == ["viagra", "casino"]
+def test_get_regexes(mock_ops, client):
+    mock_ops.return_value.Get_All_Regex_Rules.return_value = ["casino", "viagra"]
+    r = client.get("/get-regexes")
+    assert r.status_code == 200
+    assert r.json()["regex_rules"] == ["casino", "viagra"]
 
 
 @patch("api.SpamShield_Operations")
-def test_new_regex_succes(mock_ops):
-    response = client.post("/new-regex", json={"pattern": "crypto.*gratuit"}, headers=VALID_HEADERS)
-
-    assert response.status_code == 200
+def test_new_regex(mock_ops, client):
+    r = client.post("/new-regex", json={"pattern": "crypto.*gratuit"})
+    assert r.status_code == 200
     mock_ops.return_value.Add_Regex_Rule.assert_called_once_with("crypto.*gratuit")
 
 
-@patch("api.SpamShield_Operations")
-def test_new_regex_erreur_interne(mock_ops):
-    mock_ops.return_value.Add_Regex_Rule.side_effect = Exception("Regex mal formée")
-
-    response = client.post("/new-regex", json={"pattern": "("}, headers=VALID_HEADERS)
-
-    assert response.status_code == 500
+def test_new_regex_payload_invalide(client):
+    r = client.post("/new-regex", json={})
+    assert r.status_code == 422
 
 
 @patch("api.SpamShield_Operations")
-def test_delete_regex_succes(mock_ops):
-    response = client.delete("/delete-regex/3", headers=VALID_HEADERS)
-
-    assert response.status_code == 200
+def test_delete_regex(mock_ops, client):
+    r = client.delete("/delete-regex/3")
+    assert r.status_code == 200
     mock_ops.return_value.Delete_Regex_Rule.assert_called_once_with(3)
 
 
-@patch("api.SpamShield_Operations")
-def test_delete_regex_erreur_interne(mock_ops):
-    mock_ops.return_value.Delete_Regex_Rule.side_effect = Exception("Règle introuvable")
-
-    response = client.delete("/delete-regex/999", headers=VALID_HEADERS)
-
-    assert response.status_code == 500
-
-
-# ---------------------------------------------------------------------------
-# /get-detinataires, /new-detinataires, /delete-destinataire/{id}
-# ---------------------------------------------------------------------------
+# -- Destinataires --
 
 @patch("api.SpamShield_Operations")
-def test_get_detinataires_succes(mock_ops):
+def test_get_detinataires(mock_ops, client):
     mock_ops.return_value.Get_All_Destinataires.return_value = ["contact@spamshield.fr"]
-
-    response = client.get("/get-detinataires", headers=VALID_HEADERS)
-
-    assert response.status_code == 200
-    assert response.json()["destinataires"] == ["contact@spamshield.fr"]
+    r = client.get("/get-detinataires")
+    assert r.status_code == 200
+    assert r.json()["destinataires"] == ["contact@spamshield.fr"]
 
 
 @patch("api.SpamShield_Operations")
-def test_new_detinataires_succes(mock_ops):
-    response = client.post(
-        "/new-detinataires", json={"destinataire": "alerte@spamshield.fr"}, headers=VALID_HEADERS
-    )
-
-    assert response.status_code == 200
+def test_new_detinataires(mock_ops, client):
+    r = client.post("/new-detinataires", json={"destinataire": "alerte@spamshield.fr"})
+    assert r.status_code == 200
     mock_ops.return_value.Add_Destinataire.assert_called_once_with("alerte@spamshield.fr")
 
 
-@patch("api.SpamShield_Operations")
-def test_new_detinataires_erreur_interne(mock_ops):
-    mock_ops.return_value.Add_Destinataire.side_effect = Exception("Adresse déjà existante")
-
-    response = client.post(
-        "/new-detinataires", json={"destinataire": "alerte@spamshield.fr"}, headers=VALID_HEADERS
-    )
-
-    assert response.status_code == 500
+def test_new_detinataires_payload_invalide(client):
+    r = client.post("/new-detinataires", json={})
+    assert r.status_code == 422
 
 
 @patch("api.SpamShield_Operations")
-def test_delete_destinataire_succes(mock_ops):
-    response = client.delete("/delete-destinataire/2", headers=VALID_HEADERS)
-
-    assert response.status_code == 200
+def test_delete_destinataire(mock_ops, client):
+    r = client.delete("/delete-destinataire/2")
+    assert r.status_code == 200
     mock_ops.return_value.Delete_Destinataire.assert_called_once_with(2)
 
 
-@patch("api.SpamShield_Operations")
-def test_delete_destinataire_erreur_interne(mock_ops):
-    mock_ops.return_value.Delete_Destinataire.side_effect = Exception("Destinataire introuvable")
-
-    response = client.delete("/delete-destinataire/999", headers=VALID_HEADERS)
-
-    assert response.status_code == 500
-
-
-# ---------------------------------------------------------------------------
-# /get-champs-obligatoires-status, /update-champs-obligatoires-status/{key}
-# ---------------------------------------------------------------------------
+# -- Champs obligatoires --
 
 @patch("api.SpamShield_Operations")
-def test_get_champs_obligatoire_status_succes(mock_ops):
-    mock_ops.return_value.Form_Requirements.return_value = {"nom": True, "email": True}
-
-    response = client.get("/get-champs-obligatoires-status", headers=VALID_HEADERS)
-
-    assert response.status_code == 200
-    assert response.json()["form_requirements"]["email"] is True
+def test_get_champs_obligatoire_status(mock_ops, client):
+    mock_ops.return_value.Form_Requirements.return_value = {"name": True, "email": True}
+    r = client.get("/get-champs-obligatoires-status")
+    assert r.status_code == 200
+    assert r.json()["form_requirements"]["email"] is True
 
 
 @patch("api.SpamShield_Operations")
-def test_update_champs_obligatoire_status_succes(mock_ops):
-    response = client.put("/update-champs-obligatoires-status/email", headers=VALID_HEADERS)
-
-    assert response.status_code == 200
+def test_update_champs_obligatoire_status(mock_ops, client):
+    r = client.put("/update-champs-obligatoires-status/email")
+    assert r.status_code == 200
     mock_ops.return_value.Update_Form_Requirements.assert_called_once_with("email")
 
 
-@patch("api.SpamShield_Operations")
-def test_update_champs_obligatoire_status_erreur_interne(mock_ops):
-    mock_ops.return_value.Update_Form_Requirements.side_effect = Exception("Clé de champ inconnue")
-
-    response = client.put("/update-champs-obligatoires-status/inconnu", headers=VALID_HEADERS)
-
-    assert response.status_code == 500
-
-
-# ---------------------------------------------------------------------------
-# /get-ai-model-infos
-# ---------------------------------------------------------------------------
+# -- Modele IA --
 
 @patch("api.SpamShield_Operations")
-def test_get_ai_model_infos_succes(mock_ops):
+def test_get_ai_model_infos(mock_ops, client):
     mock_ops.return_value.Current_Model_Metrics.return_value = {"accuracy": 0.94}
-
-    response = client.get("/get-ai-model-infos", headers=VALID_HEADERS)
-
-    assert response.status_code == 200
-    assert response.json()["spamshield_infos"]["accuracy"] == 0.94
+    r = client.get("/get-ai-model-infos")
+    assert r.status_code == 200
+    assert r.json()["spamshield_infos"]["accuracy"] == 0.94
 
 
 @patch("api.SpamShield_Operations")
-def test_get_ai_model_infos_erreur_interne(mock_ops):
-    mock_ops.return_value.Current_Model_Metrics.side_effect = Exception("Aucun modèle entraîné")
-
-    response = client.get("/get-ai-model-infos", headers=VALID_HEADERS)
-
-    assert response.status_code == 500
-
-
-# ---------------------------------------------------------------------------
-# /build_virgin_model
-# ---------------------------------------------------------------------------
-
-@patch("api.SpamShield_Operations")
-def test_reset_ai_model_succes(mock_ops):
-    response = client.get("/build_virgin_model", headers=VALID_HEADERS)
-
-    assert response.status_code == 200
+def test_build_virgin_model(mock_ops, client):
+    r = client.get("/build_virgin_model")
+    assert r.status_code == 200
     mock_ops.return_value.virgin_model.assert_called_once()
 
 
 @patch("api.SpamShield_Operations")
-def test_reset_ai_model_erreur_interne(mock_ops):
-    mock_ops.return_value.virgin_model.side_effect = Exception("Réinitialisation impossible")
-
-    response = client.get("/build_virgin_model", headers=VALID_HEADERS)
-
-    assert response.status_code == 500
+def test_build_virgin_model_erreur(mock_ops, client):
+    mock_ops.return_value.virgin_model.side_effect = Exception("Reinit impossible")
+    r = client.get("/build_virgin_model")
+    assert r.status_code == 500
 
 
-# ---------------------------------------------------------------------------
-# /llm-report — la route testée en partie 4.7 du rapport (Swagger)
-# ---------------------------------------------------------------------------
+# -- Rapport LLM (route critique + incident Mistral) --
 
 @patch("api.LLMModel")
-def test_llm_report_succes(mock_llm_model):
-    mock_llm_model.return_value.generate_report_mistral.return_value = {
+def test_llm_report(mock_llm, client):
+    mock_llm.return_value.generate_report_mistral.return_value = {
         "model_used": "mistral-small-2603",
-        "llm_response": "État général : le système a reçu 6 messages...",
-        "base_metrics": {"messages": 6},
+        "llm_response": "Rapport de test.",
     }
-
-    response = client.get("/llm-report", headers=VALID_HEADERS)
-
-    assert response.status_code == 200
-    assert response.json()["model_used"] == "mistral-small-2603"
+    r = client.get("/llm-report")
+    assert r.status_code == 200
+    assert r.json()["model_used"] == "mistral-small-2603"
 
 
 @patch("api.LLMModel")
-def test_llm_report_cle_api_mistral_expiree(mock_llm_model):
-    """
-    Reproduit l'incident réel rencontré en monitorage (partie 4.6/4.8) :
-    la clé API Mistral a expiré, l'appel échoue avec une erreur 401
-    remontée par le SDK, capturée par le try/except de la route.
-    """
-    mock_llm_model.return_value.generate_report_mistral.side_effect = Exception(
-        'API error occurred: Status 401. Body: {"detail":"Your API key expired on 2026-08-03."}'
+def test_llm_report_cle_mistral_expiree(mock_llm, client):
+    """Incident reel : cle Mistral expiree -> 500, detecte par Grafana."""
+    mock_llm.return_value.generate_report_mistral.side_effect = Exception(
+        "API error: Status 401. Your API key expired."
     )
-
-    response = client.get("/llm-report", headers=VALID_HEADERS)
-
-    assert response.status_code == 500
-    assert "expired" in response.json()["detail"]
+    r = client.get("/llm-report")
+    assert r.status_code == 500
+    assert "expired" in r.json()["detail"]

@@ -111,7 +111,7 @@ class SET_Spam_Shield_Dependances:
 
 
     def Professionnal_mails_fr(self):
-        output_dir = f"{self.raw_data_dir}/french_ham_contact_dataset_1000.json"
+        output_dir = f"{self.raw_data_dir}french_ham_contact_dataset_1000.json"
         self.__create_dir_if_not_exist(output_dir)
         try:
             df = pd.read_json(output_dir)

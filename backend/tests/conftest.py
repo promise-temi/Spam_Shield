@@ -4,7 +4,7 @@ import json
 import pytest
 
 from unittest.mock import mock_open
-# from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient
 from unittest.mock import patch
 
 
@@ -79,7 +79,7 @@ def spamshield():
 # os.environ.setdefault("ENCRYPTION_KEY", "RxdMLSRTwGMYW6gNoAEvlWbdOHI6iDzjssyXCMMzq2I=")
 # os.environ.setdefault("MISTRAL_API_KEY", "cle-mistral-factice-pour-les-tests")
 
-# from api import app, require_api_key
+# from modapi import app, require_api_key
 
 # TEST_RESOURCES_DIR = os.path.join(os.path.dirname(__file__), "test_ressources")
 
