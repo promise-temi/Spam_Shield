@@ -459,6 +459,28 @@ def test_count_signatures():
 
     assert df_result["has_signature"] == 1
 
+@pytest.fixture
+def mock_metadata_business_rules(monkeypatch):
+    """Neutralise Metadata_Business_Rules dans NLP_Feat_Eng pour que
+    check_name / check_surname renvoient True sans charger de ressources réelles
+    (corpus, détecteur de charabia...). On teste ainsi la logique d'anonymisation
+    de replace_sensitive_personal_data de façon isolée et reproductible."""
+    from unittest.mock import MagicMock
+
+    fake_mbr = MagicMock()
+    fake_mbr.check_name.return_value = True
+    fake_mbr.check_surname.return_value = True
+    fake_mbr.check_email.return_value = True
+    fake_mbr.check_phone.return_value = True
+
+    monkeypatch.setattr(
+        "modules.NLP_Feat_Eng.Metadata_Business_Rules",
+        lambda *args, **kwargs: fake_mbr
+    )
+    return fake_mbr
+
+import logging
+
 def test_replace_sensitive_personal_data_name(mock_metadata_business_rules):  # ← ajout
     metadata = {"name":"Jane"}
     df_message = pd.DataFrame([{"text": "Bonjour, je m'appelle Jane Doe! oui jane dOe"}])
