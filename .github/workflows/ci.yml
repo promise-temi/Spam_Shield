@@ -11,10 +11,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Lancer les tests dans l'environnement de test
+
+
+      - name: Lancer la base de test
         run: >
           docker compose -f backend/tests/docker-compose.test.yml
-          up --build --abort-on-container-exit --exit-code-from tests
+          up -d
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Installer les dependances
+        run: pip install -r requirements.txt
+
+
+      - name: Attendre postgres
+        run: |
+          for i in $(seq 1 15); do
+            if docker exec $(docker ps -qf "ancestor=postgres:17") pg_isready -U postgres; then
+              echo "Postgres est pret"
+              break
+            fi
+            echo "Attente de postgres... ($i)"
+            sleep 2
+          done
+
+
+      - name: Lancer les tests
+        working-directory: backend
+        run: pytest tests --junitxml=results.xml
 
 
       - name: Publier les resultats de test
@@ -22,8 +48,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: backend/tests/results/results.xml
-
+          path: backend/results.xml
 
       - name: Nettoyer les artefacts generes par les tests
         if: always()
@@ -34,7 +59,8 @@ jobs:
           rm -f backend/tests/test_ressources/pca.pkl
           rm -f backend/tests/test_ressources/robust_scaler.pkl
 
-      - name: Eteindre l'environnement de test
+
+      - name: Eteindre la base de test
         if: always()
         run: >
           docker compose -f backend/tests/docker-compose.test.yml
