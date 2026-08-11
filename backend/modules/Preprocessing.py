@@ -338,8 +338,9 @@ class Preprocessing:
                 f"({pca.explained_variance_ratio_.sum():.2%} de variance)"
             )
 
-            logging.info("Enregistrement du nouvel artefact PCA dans ML Flow")
+            logging.info(f"Enregistrement du nouvel artefact PCA en local : {artifact_path}")
             joblib.dump(pca, f"{artifact_path}/pca.pkl")
+            logging.info("Enregistrement du nouvel artefact PCA dans ML Flow")
             ML_Flow_Operations().save_model_artefact(f"{artifact_path}/pca.pkl")
 
         else:

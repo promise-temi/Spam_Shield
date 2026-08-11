@@ -55,7 +55,10 @@ class Model:
             pour entraîner, tester, évaluer et sauvegarder le modèle.
             """
         logging.info("Début du pipeline de création d'un model de prédiction vierge")
-        self.training_data = SET_Spam_Shield_Dependances(raw_data_dir=f"{os.path.dirname(__file__)}/data/raw_data/").Dependances_Full_Pipeline(lang='fr')
+        try:
+            self.training_data = SET_Spam_Shield_Dependances(raw_data_dir=f"{self.artifact_path}/raw_data/").Dependances_Full_Pipeline(lang='fr')
+        except Exception as e:
+            logging.error('les données ne sont sans doute plus disponibles')
         if self.training_data.shape[0] < 10:
             raise ValueError("Le DataFrame doit contenir au moins 10 lignes pour entraîner un modèle.")
         # ML_Flow_Operations().delete_all_models()

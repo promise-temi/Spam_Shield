@@ -1,25 +1,97 @@
-# import os
-# import re
-# import re
-# import sys
-# import pytest
-# import pandas as pd
+import os 
+
+def test_virgin_model(
+    spamshield,
+    test_model,
+    mock_monitor,
+    monkeypatch,
+):
+
+    # Forcer SpamShield_Operations à utiliser le modèle de test
+    monkeypatch.setattr(
+        "modules.SpamShield_Operations.Model",
+        lambda: test_model
+    )
+
+    # Neutraliser complètement MLflow
+    monkeypatch.setattr(
+        "ML_Flow._ensure_mlflow_configured",
+        lambda: None
+    )
+
+    monkeypatch.setattr(
+        "ML_Flow.mlflow.log_artifact",
+        lambda *args, **kwargs: None
+    )
+
+    monkeypatch.setattr(
+        "ML_Flow.mlflow.log_metric",
+        lambda *args, **kwargs: None
+    )
+
+    monkeypatch.setattr(
+        "ML_Flow.mlflow.sklearn.log_model",
+        lambda *args, **kwargs: None
+    )
+
+    spamshield.virgin_model()
+
+    mock_monitor.record_methode_result.assert_called_once()
+
+    # Vérifie que les artefacts ont bien été créés
+    assert os.path.exists("backend/tests/test_ressources/model.pkl")
+    assert os.path.exists("backend/tests/test_ressources/tfidf.pkl")
+    assert os.path.exists("backend/tests/test_ressources/svd.pkl")
+    assert os.path.exists("backend/tests/test_ressources/pca.pkl")
+    assert os.path.exists("backend/tests/test_ressources/robust_scaler.pkl")
 
 
+data_message = {'text':'je suis un test'}
 
-# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'modules')))
-# from SpamShield_Operations import SpamShield_Operations
+def test_new_message(
+    spamshield,
+    test_model_pred,
+    mock_monitor,
+    monkeypatch,
+):
 
-# def test_new_message(monkeypatch):
-#     class FakeDB:
-#         def save_message(self, *args, **kwargs):
-#             return None
-#     message = pd.DataFrame([{'text':'Je teste mon propre outil de détection de spam, je trouve qu\'il est très efficace !', 'label':1}])
-#     metadata = {
-#     "name":"Promise",
-#     "surname":"John",
-#     "email":"Promise.john@gmail.com",
-#     "phone":"0653389212",
-#     "subject":"Je teste mon propre outil de détection de spam :)",
-#     }
-#     SpamShield_Operations().New_Message(message, metadata)
+    # Forcer SpamShield_Operations à utiliser le modèle de test
+    monkeypatch.setattr(
+        "modules.SpamShield_Operations.Model",
+        lambda: test_model_pred
+    )
+
+    # Neutraliser complètement MLflow
+    monkeypatch.setattr(
+        "ML_Flow._ensure_mlflow_configured",
+        lambda: None
+    )
+
+    monkeypatch.setattr(
+        "ML_Flow.mlflow.log_artifact",
+        lambda *args, **kwargs: None
+    )
+
+    monkeypatch.setattr(
+        "ML_Flow.mlflow.log_metric",
+        lambda *args, **kwargs: None
+    )
+
+    monkeypatch.setattr(
+        "ML_Flow.mlflow.sklearn.log_model",
+        lambda *args, **kwargs: None
+    )
+
+
+    
+    spamshield.New_Message(data_message, '')
+
+    mock_monitor.record_methode_result.assert_called_once()
+
+    # # Vérifie que les artefacts ont bien été créés
+    # assert os.path.exists("backend/tests/test_ressources/model.pkl")
+    # assert os.path.exists("backend/tests/test_ressources/tfidf.pkl")
+    # assert os.path.exists("backend/tests/test_ressources/svd.pkl")
+    # assert os.path.exists("backend/tests/test_ressources/pca.pkl")
+    # assert os.path.exists("backend/tests/test_ressources/robust_scaler.pkl")
+
