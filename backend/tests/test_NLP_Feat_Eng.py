@@ -459,8 +459,7 @@ def test_count_signatures():
 
     assert df_result["has_signature"] == 1
 
-import logging
-def test_replace_sensitive_personal_data_name():
+def test_replace_sensitive_personal_data_name(mock_metadata_business_rules):  # ← ajout
     metadata = {"name":"Jane"}
     df_message = pd.DataFrame([{"text": "Bonjour, je m'appelle Jane Doe! oui jane dOe"}])
     nlp_feat_eng = NLP_Feat_Eng(df_message, metadata=metadata)
@@ -469,10 +468,10 @@ def test_replace_sensitive_personal_data_name():
     df_result = nlp_feat_eng.df.iloc[0]
     assert df_result['text_transformed'].count('[SENSITIVE]') == 2
     logging.info(df_result['text_transformed'])
-    
 
-def test_replace_sensitive_personal_data_surname():
-    metadata = {"surname":"DOE", }
+
+def test_replace_sensitive_personal_data_surname(mock_metadata_business_rules):  # ← ajout
+    metadata = {"surname":"DOE"}
     df_message = pd.DataFrame([{"text": "Bonjour, je m'appelle Jane Doe! oui jane dOe"}])
     nlp_feat_eng = NLP_Feat_Eng(df_message, metadata=metadata)
     nlp_feat_eng.lower_the_text()
@@ -480,9 +479,9 @@ def test_replace_sensitive_personal_data_surname():
     df_result = nlp_feat_eng.df.iloc[0]
     assert df_result['text_transformed'].count('[SENSITIVE]') == 2
     logging.info(df_result['text_transformed'])
-    
 
-def test_replace_sensitive_personal_data():
+
+def test_replace_sensitive_personal_data(mock_metadata_business_rules):  # ← ajout
     metadata = {"name":"JanE", "surname":"DOE"}
     df_message = pd.DataFrame([{"text": "Bonjour, je m'appelle Jane Doe! oui jane dOe"}])
     nlp_feat_eng = NLP_Feat_Eng(df_message, metadata=metadata)
@@ -492,7 +491,8 @@ def test_replace_sensitive_personal_data():
     assert df_result['text_transformed'].count('[SENSITIVE]') == 4
     logging.info(df_result['text_transformed'])
 
-def test_replace_sensitive_personal_data_none_specified():
+
+def test_replace_sensitive_personal_data_none_specified(mock_metadata_business_rules):  # ← ajout
     metadata = {"name":"","surname":"","email":""}
     df_message = pd.DataFrame([{"text": "Bonjour, je m'appelle Jane Doe! oui jane dOe"}])
     nlp_feat_eng = NLP_Feat_Eng(df_message, metadata=metadata)
@@ -501,7 +501,6 @@ def test_replace_sensitive_personal_data_none_specified():
     df_result = nlp_feat_eng.df.iloc[0]
     assert df_result['text_transformed'].count('[SENSITIVE]') == 0
     logging.info(df_result['text_transformed'])
-    
 
 
 

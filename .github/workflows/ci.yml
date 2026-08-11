@@ -9,15 +9,45 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5433
+      DB_DATABASE: spamshield-test
+      DB_USER: postgres
+      DB_PASSWORD: rien
+      BACKEND_API_KEY: cle-de-test-1234
+      ENCRYPTION_KEY: RxdMLSRTwGMYW6gNoAEvlWbdOHI6iDzjssyXCMMzq2I=
+      MISTRAL_API_KEY: cle-mistral-factice-pour-les-tests
+
     steps:
       - uses: actions/checkout@v4
 
+      
+      - name: Creer required_metadata.json si absent
+        run: |
+          FILE=backend/modules/data/required_metadata.json
+          if [ ! -f "$FILE" ]; then
+            echo "Fichier absent, creation avec valeurs par defaut (tout false)"
+            mkdir -p backend/modules/data
+            printf '%s\n' '{' \
+              '    "name": false,' \
+              '    "surname": false,' \
+              '    "email": false,' \
+              '    "phone": false,' \
+              '    "subject": false,' \
+              '    "gibberish": false' \
+              '}' > "$FILE"
+          else
+            echo "Fichier deja present, on le garde"
+          fi
 
+      
       - name: Lancer la base de test
-        run: >
-          docker compose -f backend/tests/docker-compose.test.yml
-          up -d
+        run: docker compose -f backend/tests/docker-compose.test.yml up -d
 
+     
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -25,7 +55,7 @@ jobs:
       - name: Installer les dependances
         run: pip install -r requirements.txt
 
-
+      
       - name: Attendre postgres
         run: |
           for i in $(seq 1 15); do
@@ -37,12 +67,12 @@ jobs:
             sleep 2
           done
 
-
+      
       - name: Lancer les tests
         working-directory: backend
         run: pytest tests --junitxml=results.xml
 
-
+  
       - name: Publier les resultats de test
         if: always()
         uses: actions/upload-artifact@v4
@@ -50,6 +80,7 @@ jobs:
           name: test-results
           path: backend/results.xml
 
+      
       - name: Nettoyer les artefacts generes par les tests
         if: always()
         run: |
@@ -59,12 +90,10 @@ jobs:
           rm -f backend/tests/test_ressources/pca.pkl
           rm -f backend/tests/test_ressources/robust_scaler.pkl
 
-
+      
       - name: Eteindre la base de test
         if: always()
-        run: >
-          docker compose -f backend/tests/docker-compose.test.yml
-          down -v --remove-orphans
+        run: docker compose -f backend/tests/docker-compose.test.yml down -v --remove-orphans
 
   build:
     needs: test
