@@ -97,7 +97,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: backend/results.xml
+          path: results.xml
 
       
       # - name: Nettoyer les artefacts generes par les tests
