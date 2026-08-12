@@ -81,14 +81,14 @@ jobs:
           path: backend/results.xml
 
       
-      - name: Nettoyer les artefacts generes par les tests
-        if: always()
-        run: |
-          rm -f backend/tests/test_ressources/model.pkl
-          rm -f backend/tests/test_ressources/tfidf.pkl
-          rm -f backend/tests/test_ressources/svd.pkl
-          rm -f backend/tests/test_ressources/pca.pkl
-          rm -f backend/tests/test_ressources/robust_scaler.pkl
+      # - name: Nettoyer les artefacts generes par les tests
+      #   if: always()
+      #   run: |
+      #     rm -f backend/tests/test_ressources/model.pkl
+      #     rm -f backend/tests/test_ressources/tfidf.pkl
+      #     rm -f backend/tests/test_ressources/svd.pkl
+      #     rm -f backend/tests/test_ressources/pca.pkl
+      #     rm -f backend/tests/test_ressources/robust_scaler.pkl
 
       
       - name: Eteindre la base de test
