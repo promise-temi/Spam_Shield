@@ -13,7 +13,7 @@ jobs:
     
     env:
       DB_HOST: localhost
-      DB_PORT: 5433
+      DB_PORT: 5432
       DB_DATABASE: spamshield-test
       DB_USER: postgres
       DB_PASSWORD: rien
@@ -45,7 +45,7 @@ jobs:
 
       
       - name: Lancer la base de test
-        run: docker compose -f backend/tests/docker-compose.test.yml up -d
+        run: docker compose -f docker-compose.test.yml up -d
 
      
       - uses: actions/setup-python@v5
@@ -93,7 +93,7 @@ jobs:
       
       - name: Eteindre la base de test
         if: always()
-        run: docker compose -f backend/tests/docker-compose.test.yml down -v --remove-orphans
+        run: docker compose -f docker-compose.test.yml down -v --remove-orphans
 
   build:
     needs: test

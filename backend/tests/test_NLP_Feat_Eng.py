@@ -466,7 +466,7 @@ import logging
 
 
 
-def test_replace_sensitive_personal_data_name(test_metadata_path):  
+def test_replace_sensitive_personal_data_name(test_metadata_path, test_db):  
     metadata = {"name":"Jane"}
     df_message = pd.DataFrame([{"text": "Bonjour, je m'appelle Jane Doe! oui jane dOe"}])
     nlp_feat_eng = NLP_Feat_Eng(df_message, metadata=metadata)
@@ -477,7 +477,7 @@ def test_replace_sensitive_personal_data_name(test_metadata_path):
     logging.info(df_result['text_transformed'])
 
 
-def test_replace_sensitive_personal_data_surname(test_metadata_path): 
+def test_replace_sensitive_personal_data_surname(test_metadata_path, test_db): 
     metadata = {"surname":"DOE"}
     df_message = pd.DataFrame([{"text": "Bonjour, je m'appelle Jane Doe! oui jane dOe"}])
     nlp_feat_eng = NLP_Feat_Eng(df_message, metadata=metadata)
@@ -488,7 +488,7 @@ def test_replace_sensitive_personal_data_surname(test_metadata_path):
     logging.info(df_result['text_transformed'])
 
 
-def test_replace_sensitive_personal_data(test_metadata_path):
+def test_replace_sensitive_personal_data(test_metadata_path, test_db):
     metadata = {"name":"JanE", "surname":"DOE"}
     df_message = pd.DataFrame([{"text": "Bonjour, je m'appelle Jane Doe! oui jane dOe"}])
     nlp_feat_eng = NLP_Feat_Eng(df_message, metadata=metadata)
@@ -499,7 +499,7 @@ def test_replace_sensitive_personal_data(test_metadata_path):
     logging.info(df_result['text_transformed'])
 
 
-def test_replace_sensitive_personal_data_none_specified(test_metadata_path): 
+def test_replace_sensitive_personal_data_none_specified(test_metadata_path, test_db): 
     metadata = {"name":"","surname":"","email":""}
     df_message = pd.DataFrame([{"text": "Bonjour, je m'appelle Jane Doe! oui jane dOe"}])
     nlp_feat_eng = NLP_Feat_Eng(df_message, metadata=metadata)

@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from modules.SpamShield_Operations import SpamShield_Operations
 from modules.Model import Model
 from modules.Metadata_Business_Rules import Metadata_Business_Rules
-
+from modules.Database import Postgres_DB
 
 
 # Fixture pour initialiser le model et faire en sorteque toutes ses dépendances aille au bon endroit
@@ -49,6 +49,14 @@ def test_model_pred():
 # conftest.py
 
 import pytest
+
+@pytest.fixture
+def test_db():
+    db = Postgres_DB(sql_file_path="backend/modules/data/db.sql" ,prod=False)
+    return db
+
+    
+
 # Prometheus
 @pytest.fixture
 def mock_monitor():
@@ -79,7 +87,13 @@ def mock_mlflow_run():
 
 # Application
 @pytest.fixture
-def spamshield():
+def spamshield(test_db, monkeypatch):
+
+    monkeypatch.setattr(
+        "modules.SpamShield_Operations.Postgres_DB",
+        lambda *args, **kwargs: test_db
+    )
+
     return SpamShield_Operations()
 
 # os.environ.setdefault("BACKEND_API_KEY", "cle-de-test-1234")

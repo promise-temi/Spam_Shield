@@ -11,44 +11,46 @@ from Secure import Security
 
 
 class Postgres_DB:
-    def __init__(self, sql_file_path=f"{os.path.dirname(__file__)}/data/db.sql"):
+    def __init__(self, sql_file_path=f"{os.path.dirname(__file__)}/data/db.sql", prod=True):
         self.sql_file_path = sql_file_path
+        self.prod = prod
         self._connect()
         self._create_tables_if_not_exist()
         self.security_tools = Security()
+        
+
 
     def _connect(self):
-        try :
-        #     self.conn = psycopg2.connect(
-        #         database = os.getenv("DB_DATABASE"), 
-        #         user = os.getenv("DB_USER"), 
-        #         host= os.getenv("DB_HOST"), 
-        #         password = os.getenv("DB_PASSWORD"), 
-        #         port = os.getenv("DB_PORT"))
-        #     logging.info("Connexion à la base Postgres réussie")
-            
-        # except Exception as e:
-        #     logging.error(f"La connexion à la base Postgres à échouée : \n {e}")
-        #     logging.debug("Sans doute un test")
-        #     try: 
-            self.conn = psycopg2.connect(
-                database = os.getenv("TEST_DB_DATABASE"), 
-                user = os.getenv("TEST_DB_USER"), 
-                host= os.getenv("TEST_DB_HOST"), 
-                password = os.getenv("TEST_DB_PASSWORD"), 
-                port = os.getenv("TEST_DB_PORT"))
-            
-            
-        except Exception as e:
-            logging.info(os.getenv("TEST_DB_DATABASE"))
-            logging.info(os.getenv("TEST_DB_USER"))
-            logging.info(os.getenv("TEST_DB_HOST"))
-            logging.info(os.getenv("TEST_DB_PASSWORD"))
-            logging.info(os.getenv("TEST_DB_PORT"))
-            logging.info("Connexion à la base Postgres de tests réussie")
 
-            logging.error(f"La connexion à la base de tests Postgres à échouée : \n {e}")    
-            raise e
+        if self.prod:
+            database = os.getenv("DB_DATABASE")
+            user = os.getenv("DB_USER")
+            host = os.getenv("DB_HOST")
+            password = os.getenv("DB_PASSWORD")
+            port = os.getenv("DB_PORT")
+        else:
+            database = os.getenv("TEST_DB_DATABASE")
+            user = os.getenv("TEST_DB_USER")
+            host = os.getenv("TEST_DB_HOST")
+            password = os.getenv("TEST_DB_PASSWORD")
+            port = os.getenv("TEST_DB_PORT")
+
+        try:
+            self.conn = psycopg2.connect(
+                database=database,
+                user=user,
+                host=host,
+                password=password,
+                port=port,
+            )
+
+            logging.info(
+                f"Connexion {'TEST' if not self.prod else 'PROD'} réussie"
+            )
+
+        except Exception as e:
+            logging.error(f"Connexion échouée : {e}")
+            raise
 
 
     def _create_tables_if_not_exist(self):
