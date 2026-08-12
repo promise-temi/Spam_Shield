@@ -12,14 +12,34 @@ jobs:
 
     
     env:
-      DB_HOST: localhost
-      DB_PORT: 5432
-      DB_DATABASE: spamshield-test
-      DB_USER: postgres
-      DB_PASSWORD: rien
-      BACKEND_API_KEY: cle-de-test-1234
-      ENCRYPTION_KEY: RxdMLSRTwGMYW6gNoAEvlWbdOHI6iDzjssyXCMMzq2I=
-      MISTRAL_API_KEY: cle-mistral-factice-pour-les-tests
+      #   -- POSTRGRES --
+      DB_DATABASE: ${{ DB_DATABASE }}
+      DB_USER: ${{ DB_USER }}
+      DB_HOST: ${{ DB_HOST }}
+      DB_PASSWORD: ${{ DB_PASSWORD }}
+      DB_PORT: ${{ DB_PORT }}
+
+      # -- EMAIL --
+      EMAIL_ADDRESS: ${{ EMAIL_ADDRESS }}
+      EMAIL_PASSWORD: ${{ EMAIL_PASSWORD }}
+
+      # -- ENCRYPTION --
+      ENCRYPTION_KEY: ${{ ENCRYPTION_KEY }}
+
+      # -- MISTRAL LLM API KEY --
+
+      MISTRAL_API_KEY: ${{ MISTRAL_API_KEY }}
+
+
+      BACKEND_API_KEY: ${{ BACKEND_API_KEY }}
+
+
+      # -- TESTS -- 
+      TEST_DB_DATABASE: ${{ TEST_DB_DATABASE }}
+      TEST_DB_USER: ${{ TEST_DB_USER }}
+      TEST_DB_PASSWORD: ${{ TEST_DB_PASSWORD }}
+      TEST_DB_HOST: ${{ TEST_DB_HOST }}
+      TEST_DB_PORT: ${{ TEST_DB_PORT }}
 
     steps:
       - uses: actions/checkout@v4
