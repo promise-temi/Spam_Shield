@@ -90,7 +90,7 @@ jobs:
       
       - name: Lancer les tests
         working-directory: .
-        run: pytest tests --junitxml=results.xml
+        run: pytest backend/tests --junitxml=results.xml
   
       - name: Publier les resultats de test
         if: always()
