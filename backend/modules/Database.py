@@ -19,16 +19,35 @@ class Postgres_DB:
 
     def _connect(self):
         try :
+        #     self.conn = psycopg2.connect(
+        #         database = os.getenv("DB_DATABASE"), 
+        #         user = os.getenv("DB_USER"), 
+        #         host= os.getenv("DB_HOST"), 
+        #         password = os.getenv("DB_PASSWORD"), 
+        #         port = os.getenv("DB_PORT"))
+        #     logging.info("Connexion à la base Postgres réussie")
+            
+        # except Exception as e:
+        #     logging.error(f"La connexion à la base Postgres à échouée : \n {e}")
+        #     logging.debug("Sans doute un test")
+        #     try: 
             self.conn = psycopg2.connect(
-                database = os.getenv("DB_DATABASE"), 
-                user = os.getenv("DB_USER"), 
-                host= os.getenv("DB_HOST"), 
-                password = os.getenv("DB_PASSWORD"), 
-                port = os.getenv("DB_PORT"))
-            logging.info("Connexion à la base Postgres réussie")
+                database = os.getenv("TEST_DB_DATABASE"), 
+                user = os.getenv("TEST_DB_USER"), 
+                host= os.getenv("TEST_DB_HOST"), 
+                password = os.getenv("TEST_DB_PASSWORD"), 
+                port = os.getenv("TEST_DB_PORT"))
+            
             
         except Exception as e:
-            logging.error(f"La connexion à la base Postgres à échouée : \n {e}")
+            logging.info(os.getenv("TEST_DB_DATABASE"))
+            logging.info(os.getenv("TEST_DB_USER"))
+            logging.info(os.getenv("TEST_DB_HOST"))
+            logging.info(os.getenv("TEST_DB_PASSWORD"))
+            logging.info(os.getenv("TEST_DB_PORT"))
+            logging.info("Connexion à la base Postgres de tests réussie")
+
+            logging.error(f"La connexion à la base de tests Postgres à échouée : \n {e}")    
             raise e
 
 

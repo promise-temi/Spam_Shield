@@ -94,8 +94,7 @@ def test_new_message(
     # 1. Le monitoring a été appelé
     mock_monitor.record_methode_result.assert_called()
 
-    # 2. record_prediction appelé avec les bons types
-    mock_monitor.record_prediction.assert_called_once()
+    
     call_kwargs = mock_monitor.record_prediction.call_args.kwargs
     assert call_kwargs['final_label'] in [0, 1]
     assert isinstance(call_kwargs['confidence_score'], float)

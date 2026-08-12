@@ -1,9 +1,0 @@
-services: 
-  postrgres-test:
-    image: postgres:17
-    environment: 
-      POSTGRES_DB: spamshield-test
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: rien
-    ports:
-      - "5433:5432"

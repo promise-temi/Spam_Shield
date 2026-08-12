@@ -12,6 +12,7 @@ from unittest.mock import patch
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from modules.SpamShield_Operations import SpamShield_Operations
 from modules.Model import Model
+from modules.Metadata_Business_Rules import Metadata_Business_Rules
 
 
 
@@ -23,6 +24,11 @@ def test_model():
     model.artifact_path = "backend/tests/test_ressources"
     return model
 
+@pytest.fixture
+def test_metadata_path():
+    mbr = Metadata_Business_Rules("backend/tests/test_ressources/required_metadata.json")
+    
+    return mbr
 
 @pytest.fixture
 def test_model_pred():
@@ -40,8 +46,9 @@ def test_model_pred():
     model.artifact_path = "backend/tests/test_ressources"
     return model
 
+# conftest.py
 
-
+import pytest
 # Prometheus
 @pytest.fixture
 def mock_monitor():

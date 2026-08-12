@@ -1,0 +1,8 @@
+{
+    "name": false,
+    "surname": false,
+    "subject": true,
+    "email": false,
+    "phone": false,
+    "gibberish": true
+}

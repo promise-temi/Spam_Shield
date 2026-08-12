@@ -10,8 +10,8 @@ from Database import Postgres_DB
 
 
 class Metadata_Business_Rules:
-    def __init__(self):
-        with open(f"{os.path.dirname(__file__)}/data/required_metadata.json", "r", encoding="utf-8") as f:
+    def __init__(self, metadata_config:str=f"{os.path.dirname(__file__)}/data/required_metadata.json"):
+        with open(metadata_config, "r", encoding="utf-8") as f:
             self.metadata_values = json.load(f)
         self.name_presence = self.metadata_values['name']
         self.surname_presence = self.metadata_values['surname']
