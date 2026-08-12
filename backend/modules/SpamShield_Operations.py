@@ -59,7 +59,7 @@ class SpamShield_Operations():
             monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="New Message", status="success")
         
             # stoquer information crypté et version passé au pipeline de préprocessing
-            Postgres_DB().save_message(pred_text=pred_text, 
+            new_message = Postgres_DB().save_message(pred_text=pred_text, 
                                     raw_text=message['text'].iloc[0], 
                                     metadata=metadata,
                                     banned_patterns_found=banned_patterns_found,
@@ -85,6 +85,7 @@ class SpamShield_Operations():
 
         except Exception as e:
             logging.error(f"Erreur lors du traitement du message : {e}")
+            raise e
             monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="New Message", status="failure", error_type=e)
 
 
