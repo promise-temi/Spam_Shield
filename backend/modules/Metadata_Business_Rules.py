@@ -50,7 +50,7 @@ class Metadata_Business_Rules:
             if name == "" or name == False or name == None:
                 return False
             
-        self.gibberish(name)
+        # self.gibberish(name)
 
         df = tool_df.iloc[0]
         
@@ -83,7 +83,7 @@ class Metadata_Business_Rules:
             if surname == "" or surname == False or surname == None:
                 return False
             
-        self.gibberish(surname)
+        # self.gibberish(surname)
         df = tool_df.iloc[0]
         
         if df['msg_length'] <= 2 or df['msg_length'] >= 80:
