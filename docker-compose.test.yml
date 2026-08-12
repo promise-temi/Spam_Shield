@@ -1,8 +1,6 @@
 services:
   postrgres-test:
     image: postgres:17
-    env_file:
-      - .env
     environment:
       POSTGRES_DB: ${TEST_DB_DATABASE}
       POSTGRES_USER: ${TEST_DB_USER}
