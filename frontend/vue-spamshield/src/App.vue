@@ -1,6 +1,7 @@
 <template>
 <!-- HEADER -->
-<BarreDeNavigation></BarreDeNavigation>
+
+<BarreDeNavigation v-if="$route.name !== 'connexion'"></BarreDeNavigation>
 <router-view />
 </template>
 <script>
