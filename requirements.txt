@@ -35,3 +35,6 @@ prometheus-client
 
 mistralai==2.8.0
 google-genai
+
+pyjwt
+pwdlib
