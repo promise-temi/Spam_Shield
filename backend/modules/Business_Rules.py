@@ -119,7 +119,7 @@ class Business_Rules:
             return
 
             
-        self.gibberish(name)
+        
 
         df = self.feat_eng_metadata(name).iloc[0]
         
@@ -159,7 +159,7 @@ class Business_Rules:
         if self.surname_presence == False:
             return
             
-        self.gibberish(surname)
+        
         df = self.feat_eng_metadata(surname).iloc[0]
         
         if df['msg_length'] <= 2 or df['msg_length'] >= 80:
