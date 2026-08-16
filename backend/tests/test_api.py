@@ -1,36 +1,50 @@
-"""
-Tests d'intégration de l'API SpamShield — fichier autonome.
-
-Ce fichier embarque ses propres fixtures (client + mocks) et ne dépend pas
-du conftest. Il vérifie deux choses sur les 16 routes de l'API :
-  1. PROTECTION  : chaque route exige une clé API valide
-  2. FONCTIONNEL : chaque route renvoie le bon code et le bon format,
-                   la couche métier étant mockée (on teste le contrat HTTP,
-                   pas le pipeline ML).
-
-Lancer : pytest backend/tests/test_api.py -v
-"""
-
 import os
 import sys
 import pytest
+
 from unittest.mock import patch
 
-# --- Rendre le backend importable ---
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# --- Variables d'environnement factices AVANT d'importer l'app ---
-os.environ.setdefault("BACKEND_API_KEY", "cle-de-test-1234")
-os.environ.setdefault("ENCRYPTION_KEY", "RxdMLSRTwGMYW6gNoAEvlWbdOHI6iDzjssyXCMMzq2I=")
-os.environ.setdefault("MISTRAL_API_KEY", "cle-mistral-factice-pour-les-tests")
+sys.path.insert(
+    0,
+    os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            ".."
+        )
+    )
+)
+
+
+# Variables factices de test
+os.environ.setdefault(
+    "BACKEND_API_KEY",
+    "cle-de-test-1234"
+)
+
+os.environ.setdefault(
+    "ENCRYPTION_KEY",
+    "RxdMLSRTwGMYW6gNoAEvlWbdOHI6iDzjssyXCMMzq2I="
+)
+
+os.environ.setdefault(
+    "MISTRAL_API_KEY",
+    "cle-mistral-factice-pour-les-tests"
+)
+
 
 from fastapi.testclient import TestClient
 
-# On empêche check_model_existence de contacter MLflow au démarrage de l'import
-with patch("modules.SpamShield_Operations.SpamShield_Operations.check_model_existence"):
-    from api import app, require_api_key
 
+# Neutralise MLflow AVANT import de l'application
+with patch("mlflow.set_tracking_uri"), \
+     patch("mlflow.set_experiment"):
 
+    with patch(
+        "modules.SpamShield_Operations."
+        "SpamShield_Operations.check_model_existence"
+    ):
+        from api import app, require_api_key
 # ===========================================================================
 # Fixtures
 # ===========================================================================
@@ -273,23 +287,27 @@ def test_build_virgin_model_erreur(mock_ops, client):
 
 # -- Rapport LLM (route critique + incident Mistral) --
 
-@patch("api.LLMModel")
-def test_llm_report(mock_llm, client):
-    mock_llm.return_value.generate_report_mistral.return_value = {
+@patch("api.SpamShield_Operations")
+def test_llm_report(mock_ops, client):
+    mock_ops.return_value.llm_report.return_value = {
         "model_used": "mistral-small-2603",
         "llm_response": "Rapport de test.",
     }
+
     r = client.get("/llm-report")
+
     assert r.status_code == 200
     assert r.json()["model_used"] == "mistral-small-2603"
 
+    mock_ops.return_value.llm_report.assert_called_once()
 
-@patch("api.LLMModel")
-def test_llm_report_cle_mistral_expiree(mock_llm, client):
-    """Incident reel : cle Mistral expiree -> 500, detecte par Grafana."""
-    mock_llm.return_value.generate_report_mistral.side_effect = Exception(
+@patch("api.SpamShield_Operations")
+def test_llm_report_cle_mistral_expiree(mock_ops, client):
+    mock_ops.return_value.llm_report.side_effect = Exception(
         "API error: Status 401. Your API key expired."
     )
+
     r = client.get("/llm-report")
+
     assert r.status_code == 500
     assert "expired" in r.json()["detail"]

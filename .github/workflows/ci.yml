@@ -40,6 +40,7 @@ jobs:
       TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
       TEST_DB_HOST: ${{ secrets.TEST_DB_HOST }}
       TEST_DB_PORT: ${{ secrets.TEST_DB_PORT }}
+      MLFLOW_TRACKING_URI: http://mlflow:5050
 
     steps:
       - uses: actions/checkout@v4

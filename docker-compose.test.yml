@@ -7,3 +7,4 @@ services:
       POSTGRES_PASSWORD: ${TEST_DB_PASSWORD}
     ports:
       - "${TEST_DB_PORT}:5432"
+
