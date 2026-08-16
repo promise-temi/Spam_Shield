@@ -72,28 +72,25 @@ class Mail_Operations:
     
 
     def send_report(self, phase_start, phase_end, deadline):
-        try:
-            logging.info("Début Envoi Rapport")
+        logging.info("Début Envoi Rapport")
 
-            prospects = self.DB.get_prospect_mail("email")
-            logging.info(f"Destinataires rapport : {prospects}")
+        prospects = self.DB.get_prospect_mail("email")
+        logging.info(f"Destinataires rapport : {prospects}")
 
-            if not prospects:
-                logging.warning("Aucun destinataire trouvé pour le rapport.")
-                return
+        if not prospects:
+            logging.warning("Aucun destinataire trouvé pour le rapport.")
+            return
 
-            llm_report = LLMModel().generate_report_mistral()
+        llm_report = LLMModel().generate_report_mistral()
 
-            llm_response = llm_report.get("llm_response", "Analyse indisponible.")
+        llm_response = llm_report.get("llm_response", "Analyse indisponible.")
 
-            base_metrics = llm_report.get("base_metrics", {})
+        base_metrics = llm_report.get("base_metrics", {})
 
-            system_data = base_metrics.get("system_data", {})
-            system_metrics = system_data.get("metrics", {})
+        system_data = base_metrics.get("system_data", {})
+        system_metrics = system_data.get("metrics", {})
 
-            model_metrics = base_metrics.get("model_metrics") or {}
-        except AttributeError:
-            logging.info("Aucun rapport à envoyer")
+        model_metrics = base_metrics.get("model_metrics") or {}
 
         def format_percent(value):
             if value is None:

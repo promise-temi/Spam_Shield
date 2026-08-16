@@ -103,12 +103,14 @@ class Scheduler:
                 logging.info(
                     "Envoi du rapport de fin de phase."
                 )
-
-                self.mail_ops.send_report(
-                    phase_start,
-                    phase_end,
-                    carence_end
-                )
+                try:
+                    self.mail_ops.send_report(
+                        phase_start,
+                        phase_end,
+                        carence_end
+                    )
+                except Exception as e:
+                    logging.info("Aucune données pour réaliser un rapport")
 
             return
 

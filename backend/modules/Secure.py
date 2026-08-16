@@ -1,5 +1,6 @@
 from cryptography.fernet import Fernet
-# import jwt
+import secrets
+import hashlib
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -75,3 +76,19 @@ class Security:
 
         return metadata
 
+    def generate_login_code(self):
+        return f"{secrets.randbelow(1_000_000):06d}"
+
+
+    def generate_session_token(self):
+        return secrets.token_urlsafe(32)
+
+
+    def hash_value(self, value):
+        return hashlib.sha256(
+            value.encode("utf-8")
+        ).hexdigest()
+
+
+    def verify_hashed_value(self, value, expected_hash):
+        return self.hash_value(value) == expected_hash

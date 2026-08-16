@@ -49,3 +49,12 @@ CREATE TABLE IF NOT EXISTS Prospects_mails (
 
 
 
+CREATE TABLE IF NOT EXISTS auth_sessions (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    code_hash TEXT,
+    code_expires_at TIMESTAMP,
+    session_token_hash TEXT,
+    session_expires_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

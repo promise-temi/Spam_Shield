@@ -655,3 +655,122 @@ class Postgres_DB:
             f"{deleted_count} messages créés avant ou à "
             f"{before} ont été supprimés."
         )
+
+
+
+
+    import datetime
+
+
+    def create_auth_code(self, email, code_hash, expires_at):
+        cur = self.conn.cursor()
+
+        cur.execute(
+            """
+            INSERT INTO auth_sessions (
+                email,
+                code_hash,
+                code_expires_at,
+                session_token_hash,
+                session_expires_at
+            )
+            VALUES (%s, %s, %s, NULL, NULL)
+            """,
+            (
+                email,
+                code_hash,
+                expires_at
+            )
+        )
+
+        self.conn.commit()
+        cur.close()
+
+
+    def get_latest_auth_code(self, email):
+        cur = self.conn.cursor()
+
+        cur.execute(
+            """
+            SELECT
+                id,
+                code_hash,
+                code_expires_at
+            FROM auth_sessions
+            WHERE email = %s
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (email,)
+        )
+
+        row = cur.fetchone()
+        cur.close()
+
+        return row
+
+
+    def activate_auth_session(
+        self,
+        auth_id,
+        session_token_hash,
+        session_expires_at
+    ):
+        cur = self.conn.cursor()
+
+        cur.execute(
+            """
+            UPDATE auth_sessions
+            SET
+                session_token_hash = %s,
+                session_expires_at = %s,
+                code_hash = NULL,
+                code_expires_at = NULL
+            WHERE id = %s
+            """,
+            (
+                session_token_hash,
+                session_expires_at,
+                auth_id
+            )
+        )
+
+        self.conn.commit()
+        cur.close()
+
+
+    def get_session_by_token(self, session_token_hash):
+        cur = self.conn.cursor()
+
+        cur.execute(
+            """
+            SELECT
+                id,
+                email,
+                session_expires_at
+            FROM auth_sessions
+            WHERE session_token_hash = %s
+            LIMIT 1
+            """,
+            (session_token_hash,)
+        )
+
+        row = cur.fetchone()
+        cur.close()
+
+        return row
+
+
+    def delete_session(self, session_token_hash):
+        cur = self.conn.cursor()
+
+        cur.execute(
+            """
+            DELETE FROM auth_sessions
+            WHERE session_token_hash = %s
+            """,
+            (session_token_hash,)
+        )
+
+        self.conn.commit()
+        cur.close()
