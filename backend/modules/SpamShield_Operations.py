@@ -14,6 +14,7 @@ from Set_SpamShield import SET_Spam_Shield_Dependances
 from NLP_Feat_Eng import NLP_Feat_Eng
 from ML_Flow import ML_Flow_Operations
 from Helpers_Monitoring import Helpers_Monitoring
+from modules.LLModel import LLMModel
 monitor = Helpers_Monitoring()
 
 class SpamShield_Operations():
@@ -133,9 +134,10 @@ class SpamShield_Operations():
     def Retrain_All_Messages(self):
         try:
             #reccupère les messages préprocésé sous forme de liste de dictionnaire
-            messages = pd.DataFrame(Postgres_DB().get_all_anonymized_messages())
+            messages = self.get_current_training_data()
             model = Model()
             model.AI_full_retrain_model_pipeline(df=messages)
+            self.delete_current_training_data()
             logging.info("Réentraînement du modèle terminé avec succès.")
             monitor.record_model_retrain(is_success=True)
             monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Retrain Model", status="success")
@@ -237,13 +239,32 @@ class SpamShield_Operations():
     def Current_Model_Metrics(self):
         try:
             metrics = ML_Flow_Operations().get_latest_model_metrics()
+            logging.info(metrics)
             monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Get Current Model Metrics", status="success")
+            try:
+                training_data = self.get_current_training_data()
+                metrics['training_data'] = training_data.shape[0]
+            except Exception as e:
+                metrics['training_data'] = 0
             return metrics
         except Exception as e:
             logging.error(f"Erreur lors de la récupération des métriques du modèle actuel : {e}")
             monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Get Current Model Metrics", status="failure", error_type=e)
         
-        
+
+    def get_current_training_data(self, path=f"{os.path.dirname(__file__)}/data/training_data.parquet"):
+        df = pd.read_parquet(path)
+        return df
+
+    def delete_current_training_data(self, path=f"{os.path.dirname(__file__)}/data/training_data.parquet"):
+        if os.path.exists(path):
+            os.remove(path)
+            logging.info(f"Données d'entraînement supprimées : {path}")
+            return True
+
+        logging.info("Aucune donnée d'entraînement à supprimer.")
+        return False
+
     # FORM
     
     def Form_Requirements(self):
@@ -298,37 +319,78 @@ class SpamShield_Operations():
 
 
     def check_model_existence(self):
-        max_retries = 5
-        for attempt in range(max_retries):
-            try:
-                latest_model = ML_Flow_Operations().get_latest_model()
-                if latest_model is None:
-                    logging.info("Aucun modèle trouvé, entraînement d'un modèle vierge.")
-                    self.virgin_model()
-                else:
-                    logging.info("Modèle existant trouvé dans MLflow.")
-                monitor.record_methode_result(
-                    pipe_type="Spamshield Operations",
-                    is_success=True,
-                    name="Check Model Existence",
-                    status="success"
+        model_path = f"{Model().artifact_path}/model.pkl"
+
+        try:
+            model_exist = os.path.exists(model_path)
+
+            if not model_exist:
+                logging.info(
+                    "Aucun modèle existant en local, création du modèle initial."
                 )
-                monitor.record_model_existence_check(is_success=True)
-                return  # succès → on sort
-            except Exception as e:
-                logging.warning(f"Tentative {attempt + 1}/{max_retries} échouée : {e}")
-                if attempt < max_retries - 1:
-                    time.sleep(5)  # attend 5 secondes avant de réessayer
-                else:
-                    logging.error("MLflow inaccessible après plusieurs tentatives.")
-                    monitor.record_methode_result(
-                        pipe_type="Spamshield Operations",
-                        is_success=False,
-                        name="Check Model Existence",
-                        status="failure",
-                        error_type=e
-                    )
+                self.virgin_model()
+            else:
+                logging.info(
+                    "Modèle existant trouvé en local."
+                )
+
+            monitor.record_methode_result(
+                pipe_type="Spamshield Operations",
+                is_success=True,
+                name="Check Model Existence",
+                status="success"
+            )
+
+            monitor.record_model_existence_check(
+                is_success=True
+            )
+
+        except Exception as e:
+            logging.error(
+                f"Erreur lors de la vérification du modèle local : {e}"
+            )
+
+            monitor.record_methode_result(
+                pipe_type="Spamshield Operations",
+                is_success=False,
+                name="Check Model Existence",
+                status="failure",
+                error_type=e
+            )
+
+            monitor.record_model_existence_check(
+                is_success=False
+            )
 
 
+    def llm_report(self):
+        try:
+            report_data = LLMModel().generate_report_mistral()
 
-    
+            monitor.record_methode_result(
+            pipe_type="Spamshield Operations",
+            is_success=True,
+            name="Vulgarize with llm the metrics",
+            status="success"
+            )
+
+            monitor.record_model_existence_check(
+                is_success=True
+            )
+            return report_data
+
+        except Exception as e:
+            logging.error(
+                f"Erreur lors de la vulgarisation avec le llm"
+            )
+            monitor.record_methode_result(
+                pipe_type="Spamshield Operations",
+                is_success=False,
+                name="Vulgarize with llm the metrics",
+                status="failure",
+                error_type=e
+            )
+
+            monitor.record_model_existence_check(
+                is_success=False
+            )

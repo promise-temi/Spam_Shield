@@ -7,6 +7,7 @@ import logging
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from Secure import Security
+import pandas as pd
 
 
 
@@ -581,3 +582,76 @@ class Postgres_DB:
         self.conn.commit()
         cur.close()
         logging.info(f"Le label du message avec l'ID '{id}' a été mis à jour avec succès.")
+
+
+
+
+
+    def save_anonimized_messages(self, before, parquet_path=f"{os.path.dirname(__file__)}/data/training_data.parquet"):
+        cur = self.conn.cursor()
+
+        cur.execute(
+            """
+            SELECT preprocessed_text, final_label
+            FROM messages
+            WHERE created_at <= %s
+            ORDER BY created_at ASC
+            """,
+            (before,)
+        )
+
+        rows = cur.fetchall()
+        cur.close()
+
+        if not rows:
+            logging.info(f"Aucun message avant ou à la date {before}.")
+            return
+
+        new_messages = pd.DataFrame(rows, columns=["text", "label"])
+
+        # Conversion explicite bool -> int
+        # False = 0 / True = 1
+        new_messages["label"] = (new_messages["label"].astype(int))
+
+        os.makedirs(os.path.dirname(parquet_path), exist_ok=True)
+
+        # Si le parquet existe déjà, on conserve son contenu
+        if os.path.exists(parquet_path):
+            existing_messages = pd.read_parquet(parquet_path)
+
+            all_messages = pd.concat([existing_messages, new_messages], ignore_index=True)
+
+            # Évite de réinsérer exactement les mêmes exemples
+            all_messages = all_messages.drop_duplicates(subset=["text", "label"], keep="last")
+
+        else:
+            all_messages = new_messages
+
+        all_messages.to_parquet(parquet_path, index=False)
+
+        logging.info(
+            f"{len(new_messages)} messages anonymisés "
+            f"ajoutés dans {parquet_path}."
+        )
+
+
+    def delete_phase_messages(self, before):
+        cur = self.conn.cursor()
+
+        cur.execute(
+            """
+            DELETE FROM messages
+            WHERE created_at <= %s
+            """,
+            (before,)
+        )
+
+        deleted_count = cur.rowcount
+
+        self.conn.commit()
+        cur.close()
+
+        logging.info(
+            f"{deleted_count} messages créés avant ou à "
+            f"{before} ont été supprimés."
+        )

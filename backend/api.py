@@ -14,7 +14,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from modules.Secure import Security
 from modules.SpamShield_Operations import SpamShield_Operations
-from modules.LLModel import LLMModel
+
 from modules.Helpers_Monitoring import Helpers_Monitoring
 
 # 2. instances
@@ -27,7 +27,7 @@ app = FastAPI()
 # 4. middlewares
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -339,10 +339,22 @@ def reset_ai_model(_=Depends(require_api_key)):
         raise HTTPException(status_code=500, detail=str(e))
  
  
+@app.get("/retrain_model")
+def reset_ai_model(_=Depends(require_api_key)):
+    """Rentraine le modèle d'ia"""
+    try:
+        SpamShield_Operations().retrain_model()
+        return JSONResponse(status_code=200, content={"message":"ok"})
+    except Exception as e:
+        logging.exception("Erreur lors de la l'entrainement du modèle IA.")
+        raise HTTPException(status_code=500, detail=str(e))
+ 
+
+
 @app.get("/llm-report")
 def get_llm_report(_=Depends(require_api_key)):
     try:
-        report_data = LLMModel().generate_report_mistral()
+        report_data = SpamShield_Operations().llm_report()
         return JSONResponse(status_code=200, content=report_data)
     except Exception as e:
         logging.exception("Erreur lors de la génération du rapport LLM.")

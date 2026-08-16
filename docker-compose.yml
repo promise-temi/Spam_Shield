@@ -7,11 +7,15 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
     depends_on:
       postgres:
         condition: service_healthy
       mlflow:
         condition: service_healthy
+    volumes:
+      - ./backend/modules/data:/app/backend/modules/data
 
   scheduler:
     build:
@@ -19,13 +23,19 @@ services:
       dockerfile: dockerfile.scheduler
     env_file:
       - .env
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
     depends_on:
       postgres:
         condition: service_healthy
-
+      mlflow:
+        condition: service_healthy
+    volumes:
+      - ./backend/modules/data:/app/backend/modules/data
+      
   frontend:
     build:
-      context: ./frontend/vue-spamshield
+      context: .
       dockerfile: dockerfile.frontend
     ports:
       - "5173:5173"
@@ -43,28 +53,41 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_DATABASE}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER} -d ${DB_DATABASE}"
+        ]
       interval: 5s
       timeout: 3s
       retries: 10
       start_period: 10s
-
+      
   mlflow:
     image: ghcr.io/mlflow/mlflow:latest
     command: >
       mlflow server
       --host 0.0.0.0
       --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+      --allowed-hosts "mlflow:5000,localhost:5000,127.0.0.1:5000,localhost:5050,127.0.0.1:5050"
     ports:
       - "5050:5000"
     volumes:
-      - mlflow_data:/mlruns
+      - mlflow_data:/mlflow
     healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost', 5000)); s.close()"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1',5000)); s.close()"
+        ]
       interval: 5s
       timeout: 5s
-      retries: 10
-      start_period: 30s
+      retries: 15
+      start_period: 20s
 
   prometheus:
     image: prom/prometheus

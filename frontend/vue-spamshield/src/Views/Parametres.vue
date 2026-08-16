@@ -117,6 +117,7 @@
                 <ul>
                     <!-- <li>Model : <strong>SVC (Support Vector Classifier)</strong></li> -->
                     <li>Données d'entrainement : <strong>{{ modelInfos.training_nb }}</strong></li>
+                    <li>Nouvelle données disponibles: <strong>{{modelInfos.training_data}}</strong></li>
                 </ul>
                 <div class="card1-lateral">
                     <ul>
@@ -129,11 +130,22 @@
                     
                 </div>
                 <div class="buttons">
-                    <button>ML Flow</button>
-                    <button>Grafana</button>
+                    <button><a href="http://127.0.0.1:5050/#/" target="_blank">ML Flow</a></button>
+                    <button><a href="http://127.0.0.1:3000" target="_blank">Grafana</a></button>
                 </div>
             </div>
-        
+            <div class="card card3">
+                <h4>Réentraîner le modèle d'IA</h4>
+
+                <p>
+                    Réentraînez le modèle avec les nouvelles données collectées afin d'améliorer
+                    progressivement ses performances et de l'adapter aux corrections apportées.
+                </p>
+
+                <button v-on:click="retrainModel">
+                    Réentraîner le modèle
+                </button>
+            </div>
             <div class="card card3">
                 <h4>Réinitialiser le modèle d'IA</h4>
                 <p>Supprimez le modèle actuellement utilisé et revenez à un modèle vierge.</p>
@@ -166,6 +178,7 @@ export default{
                 recall: 0,
                 f1_score: 0,
                 training_nb: 0,
+                training_data:0,
             }
         }
     },
@@ -290,8 +303,24 @@ export default{
             .catch(error => {
                 console.error(error)
             })
+        
+        },
 
+        retrainModel(){
+            if(this.modelInfos.training_data > 15){
+                api.get("/retrain_model")
+                .then(result => {
+                    console.log(result)
+                })
+                .catch(error => {
+                    console.error(error)
+                })
+            }
+            else{
+                alert("Pas assez de données pour réentraîner le modèle. Au moins 15 exemples sont nécessaires. Utilisez le banc de test pour ajouter des exemples ou attendez de nouveaux messages.")
+            }
         }
+
     },
     mounted(){
         this.getAllExpressions()

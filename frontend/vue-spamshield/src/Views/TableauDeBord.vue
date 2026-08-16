@@ -87,12 +87,8 @@
                         <GraphGaugeConfidence :confidence="dashbord_metrics?.metrics?.avg_confidence??0"></GraphGaugeConfidence>
                     </div>
                     <div class="confidence-spam-ham">
-                        <div class="confiance-ham">
-                            <p>{{ ham_status }}</p>
-                        </div>
-                        <div class="confiance-spam">
-                            <p>{{ spam_status }}</p>
-                        </div>
+                        <pre>{{llmReport}}</pre>
+                        
                     </div>
                 </div>
             </div>
@@ -271,7 +267,7 @@
                         </div>
                     </div>
                     <div class="correction" v-if="selected_message.id">
-                        <p>Le modèle s'est trompé ? Ce message vous semble être {{ selected_message?.model_label === false ? 'indésirable' : selected_message?.model_label === true ? 'légitime' : '__' }} ?</p>
+                        <p>Le modèle s'est trompé ? Ce message vous semble être {{ selected_message?.final_label === false ? 'indésirable' : selected_message?.final_label === true ? 'légitime' : '__' }} ?</p>
                         <button  v-on:click="updateLabel(selected_message.id) ">Correction</button>
                     </div>
                 </div>
@@ -294,7 +290,8 @@ export default{
             messages : [],
             trier_par: "date_desc",
             filtrer_par: "*",
-            selected_message: {}
+            selected_message: {},
+            llmReport:''
         }
     },
     components:{
@@ -309,6 +306,7 @@ export default{
             .then(response => {
                 console.log(response.data)
                 this.dashbord_metrics = response.data.metrics
+                this.get_llm_report()
             })
             .catch(error => {
                 console.error(error)
@@ -338,11 +336,22 @@ export default{
             api.get(`/update_label/${id}`)
             .then(response => {
                 console.log(response.data)
+                this.$router.go(0)
             })
             .catch(error => {
                 console.error(error)
             })
         },
+        get_llm_report(){
+        api.get(`/llm-report`)
+            .then(response => {
+                this.llmReport = response.data.llm_response
+                
+            })
+            .catch(error => {
+                console.error(error)
+        })
+    }
     },
     mounted(){
         this.get_dashbord_metrics()
@@ -354,57 +363,11 @@ export default{
     },
     filtrer_par() {
         this.get_all_messages(this.trier_par, this.filtrer_par);
-    }
+    },
+    
 },
     computed: {
-        spam_status() {
-            const c = this.dashbord_metrics?.metrics?.avg_confidence_spam??0;
-            const corrections = this.dashbord_metrics?.metrics?.spam_corriges??0;
-
-            if (c >= 0.75) {
-                if (corrections <= 1) {
-                    return "Le modèle est excellent pour détecter les messages indésirables. Il reconnaît très bien vos contextes habituels.";
-                }
-                return "Le modèle détecte très bien les messages indésirables, même si quelques corrections montrent qu'il ajuste encore certains cas particuliers.";
-            }
-
-            if (c >= 0.50) {
-                if (corrections <= 2) {
-                    return "Le modèle est bon pour détecter les messages indésirables, mais il peut encore s'améliorer sur certains cas.";
-                }
-                return "Le modèle détecte les messages indésirables correctement, mais les corrections indiquent qu'il hésite encore sur plusieurs contextes.";
-            }
-
-            // c < 0.50
-            if (corrections >= 3) {
-                return "Le modèle apprend encore à reconnaître les messages indésirables. Plusieurs corrections montrent un nouveau contexte ou des messages inhabituels.";
-            }
-            return "Le modèle n'est pas encore sûr pour les messages indésirables. Il découvre probablement de nouveaux types de messages.";
-        },
-        ham_status() {
-            const c = this.dashbord_metrics?.metrics?.avg_confidence_ham??0;
-            const corrections = this.dashbord_metrics?.metrics?.ham_corriges??0;
-
-            if (c >= 0.75) {
-                if (corrections <= 1) {
-                    return "Le modèle identifie très bien les messages légitimes. Il est habitué à vos données.";
-                }
-                return "Le modèle reconnaît bien les messages légitimes, même si quelques corrections montrent des cas ambigus.";
-            }
-
-            if (c >= 0.50) {
-                if (corrections <= 2) {
-                    return "Le modèle identifie correctement les messages légitimes, mais il peut encore s'améliorer.";
-                }
-                return "Le modèle reconnaît les messages légitimes, mais les corrections indiquent qu'il hésite sur certains contextes.";
-            }
-
-            // c < 0.50
-            if (corrections >= 3) {
-                return "Le modèle apprend encore à reconnaître les messages légitimes. Plusieurs corrections montrent un contexte nouveau.";
-            }
-            return "Le modèle n'est pas encore sûr pour les messages légitimes. Il découvre probablement de nouveaux types de contenus.";
-        },
+        
         formatDate() {
         return (iso) => {
             const d = new Date(iso);
@@ -522,14 +485,33 @@ div.confidence-spam-ham{
     display: flex;  
     flex-direction: column;
     gap: 10px;
-    margin-top: 20px;
 }
 
-div.confiance-ham,div.confiance-spam{
+div.confidence-spam-ham pre{
     display: flex;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
     flex-direction: column;
      background-color: #3842b2e6; padding: 10px; border: 1px solid #b0ccfd81; border-radius: 5px;
      color: white;
+      white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;
 }
 
 div.confiance-ham p,div.confiance-spam p{
