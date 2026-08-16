@@ -20,10 +20,10 @@ class Scheduler:
 
     def __init__(self):
         # TEST : 1 minute de phase
-        self.phase_duration = datetime.timedelta(minutes=1)
+        self.phase_duration = datetime.timedelta(days=14)
 
         # TEST : 1 minute de carence
-        self.phase_carence = datetime.timedelta(minutes=1)
+        self.phase_carence = datetime.timedelta(days=7)
 
         # Envoi du rapport dès le début de la carence
         self.carence_message_delay = datetime.timedelta(seconds=0)
