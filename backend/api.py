@@ -168,10 +168,7 @@ class Settings(BaseModel):
     recevoirParMail: bool
 
 
-class NewMessageRequest(BaseModel):
-    message: str
-    metadata: Metadata
-    settings: Settings
+
 
 
 class RegexRequest(BaseModel):
@@ -182,47 +179,26 @@ class DestinataireRequest(BaseModel):
     destinataire: str
 
 @app.post("/auth/request-code")
-def request_auth_code(
-    data: AuthEmailRequest
-):
+def request_auth_code(data: AuthEmailRequest):
     email_address = os.getenv("EMAIL_ADDRESS")
-
     if data.email != email_address:
-        raise HTTPException(
-            status_code=403,
-            detail="Vous n'avez pas les droits pour accéder à cette application."
-        )
+        raise HTTPException(status_code=403, detail="Vous n'avez pas les droits pour accéder à cette application.")
 
     db = Postgres_DB()
-
     code = security.generate_login_code()
+    code_hash = security.hash_value(code)
 
-    code_hash = security.hash_value(
-        code
-    )
+    expires_at = (datetime.datetime.now() + datetime.timedelta(minutes=10))
 
-    expires_at = (
-        datetime.datetime.now()
-        + datetime.timedelta(minutes=10)
-    )
+    db.create_auth_code(email=data.email, code_hash=code_hash, expires_at=expires_at)
 
-    db.create_auth_code(
-        email=data.email,
-        code_hash=code_hash,
-        expires_at=expires_at
-    )
-
-    email_password = os.getenv(
-        "EMAIL_PASSWORD"
-    )
+    email_password = os.getenv("EMAIL_PASSWORD")
 
     msg = EmailMessage()
 
     msg["From"] = email_address
     msg["To"] = data.email
-    msg["Subject"] = (
-        "SpamShield - Code de connexion"
-    )
+    msg["Subject"] = ("SpamShield - Code de connexion")
 
     msg.set_content(
         f"""Bonjour,
@@ -239,105 +215,45 @@ SpamShield
 """
     )
 
-    with smtplib.SMTP_SSL(
-        "smtp.gmail.com",
-        465
-    ) as smtp:
-        smtp.login(
-            email_address,
-            email_password
-        )
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+        smtp.login(email_address, email_password)
 
-        smtp.send_message(
-            msg
-        )
+        smtp.send_message(msg)
 
-    return {
-        "message": "Code envoyé."
-    }
+    return {"message": "Code envoyé."}
 
 
 @app.post("/auth/verify-code")
-def verify_auth_code(
-    data: AuthCodeRequest,
-    response: Response
-):
+def verify_auth_code(data: AuthCodeRequest, response: Response):
     db = Postgres_DB()
-
-    auth_data = db.get_latest_auth_code(
-        data.email
-    )
+    auth_data = db.get_latest_auth_code(data.email)
 
     if not auth_data:
-        raise HTTPException(
-            status_code=401,
-            detail="Aucun code de connexion trouvé."
-        )
+        raise HTTPException(status_code=401, detail="Aucun code de connexion trouvé.")
 
     auth_id = auth_data[0]
     code_hash = auth_data[1]
     code_expires_at = auth_data[2]
 
-    if (
-        code_hash is None
-        or code_expires_at is None
-    ):
-        raise HTTPException(
-            status_code=401,
-            detail="Code invalide."
-        )
+    if (code_hash is None or code_expires_at is None):
+        raise HTTPException(status_code=401, detail="Code invalide.")
 
-    if (
-        datetime.datetime.now()
-        >= code_expires_at
-    ):
-        raise HTTPException(
-            status_code=401,
-            detail="Code expiré."
-        )
+    if (datetime.datetime.now() >= code_expires_at):
+        raise HTTPException(status_code=401, detail="Code expiré.")
 
-    if not security.verify_hashed_value(
-        data.code,
-        code_hash
-    ):
-        raise HTTPException(
-            status_code=401,
-            detail="Code invalide."
-        )
+    if not security.verify_hashed_value(data.code, code_hash):
+        raise HTTPException(status_code=401, detail="Code invalide.")
 
-    session_token = (
-        security.generate_session_token()
-    )
+    session_token = (security.generate_session_token())
+    session_token_hash = (security.hash_value(session_token))
 
-    session_token_hash = (
-        security.hash_value(
-            session_token
-        )
-    )
+    session_expires_at = (datetime.datetime.now() + datetime.timedelta(days=1))
 
-    session_expires_at = (
-        datetime.datetime.now()
-        + datetime.timedelta(days=1)
-    )
+    db.activate_auth_session(auth_id=auth_id, session_token_hash=session_token_hash, session_expires_at=session_expires_at)
 
-    db.activate_auth_session(
-        auth_id=auth_id,
-        session_token_hash=session_token_hash,
-        session_expires_at=session_expires_at
-    )
+    response.set_cookie(key="session_token", value=session_token, httponly=True, secure=False, samesite="lax", max_age=86400)
 
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=False,
-        samesite="lax",
-        max_age=86400
-    )
-
-    return {
-        "message": "Connexion réussie."
-    }
+    return {"message": "Connexion réussie."}
 
 
 @app.get("/auth/me")
@@ -405,39 +321,14 @@ def dashboard_metrics(
         )
 
 
-@app.get(
-    "/get-messages/{trier_par}/{filtrer_par}"
-)
-def get_all_messages(
-    trier_par: str,
-    filtrer_par: str,
-    _=Depends(require_session)
-):
+@app.get("/get-messages/{trier_par}/{filtrer_par}")
+def get_all_messages(trier_par: str, filtrer_par: str, _=Depends(require_session)):
     try:
-        messages = (
-            SpamShield_Operations()
-            .Show_Messages(
-                trier_par,
-                filtrer_par
-            )
-        )
-
-        return JSONResponse(
-            status_code=200,
-            content={
-                "messages": messages
-            }
-        )
-
+        messages = (SpamShield_Operations().Show_Messages(trier_par, filtrer_par))
+        return JSONResponse(status_code=200, content={"messages": messages})
     except Exception as e:
-        logging.exception(
-            "Erreur lors de la récupération des messages."
-        )
-
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        logging.exception("Erreur lors de la récupération des messages.")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get(
@@ -501,49 +392,25 @@ def update_label(
             detail=str(e)
         )
 
+class NewMessageRequest(BaseModel):
+    message: str
+    metadata: Metadata
+    settings: Settings
 
 @app.post("/new-message")
-async def new_message(
-    newMessage: NewMessageRequest,
-    _=Depends(require_api_key)
-):
+async def new_message(newMessage: NewMessageRequest, _=Depends(require_api_key)):
     try:
-        message = pd.DataFrame(
-            [
-                {
-                    "text":
-                        newMessage.message
-                }
-            ]
-        )
+        message = pd.DataFrame([{"text": newMessage.message}])
+        metadata = (newMessage.metadata.model_dump())
 
-        metadata = (
-            newMessage
-            .metadata
-            .model_dump()
-        )
+        SpamShield_Operations().New_Message(message, metadata)
 
-        SpamShield_Operations().New_Message(
-            message,
-            metadata
-        )
-
-        return JSONResponse(
-            status_code=200,
-            content={
-                "message": "ok"
-            }
-        )
+        return JSONResponse(status_code=200, content={"message": "ok"})
 
     except Exception as e:
-        logging.exception(
-            "Erreur lors du traitement d'un nouveau message."
-        )
+        logging.exception("Erreur lors du traitement d'un nouveau message.")
 
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/get-regexes")
