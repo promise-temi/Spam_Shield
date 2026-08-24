@@ -86,9 +86,8 @@ class SpamShield_Operations():
 
         except Exception as e:
             logging.error(f"Erreur lors du traitement du message : {e}")
-            raise e
             monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="New Message", status="failure", error_type=e)
-
+            raise e
 
 
 
@@ -143,8 +142,8 @@ class SpamShield_Operations():
             monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Retrain Model", status="success")
         except Exception as e:
             logging.error(f"Erreur lors du réentraînement du modèle : {e}")
+            monitor.record_model_retrain(is_success=False, error_type=e)
             monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Retrain Model", status="failure", error_type=e)
-        
 
     
     def Delete_All_Messages(self):
@@ -229,12 +228,13 @@ class SpamShield_Operations():
         try:
             logging.info("Aucun modèle existant trouvé dans ML Flow. Entraînement d'un modèle vierge.")
             Model().AI_full_virgin_model_training_pipeline()
+            monitor.record_virgin_model_training(is_success=True)
             monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Virgin Model Training", status="success")
         except Exception as e:
             logging.error(f"Erreur lors de l'entraînement du modèle vierge : {e}")
-            monitor.record_virgin_model_training(is_success=True)
+            monitor.record_virgin_model_training(is_success=False, error_type=e)
             monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Virgin Model Training", status="failure", error_type=e)
-
+            raise
     
     def Current_Model_Metrics(self):
         try:
@@ -333,7 +333,7 @@ class SpamShield_Operations():
                 logging.info(
                     "Modèle existant trouvé en local."
                 )
-
+            monitor.record_model_existence_check(is_success=True)
             monitor.record_methode_result(
                 pipe_type="Spamshield Operations",
                 is_success=True,
@@ -341,14 +341,12 @@ class SpamShield_Operations():
                 status="success"
             )
 
-            monitor.record_model_existence_check(
-                is_success=True
-            )
-
+            
         except Exception as e:
             logging.error(
                 f"Erreur lors de la vérification du modèle local : {e}"
             )
+            monitor.record_model_existence_check(is_success=False, error_type=e)
 
             monitor.record_methode_result(
                 pipe_type="Spamshield Operations",
@@ -357,10 +355,9 @@ class SpamShield_Operations():
                 status="failure",
                 error_type=e
             )
+            raise
 
-            monitor.record_model_existence_check(
-                is_success=False
-            )
+            
 
 
     def llm_report(self):
@@ -374,9 +371,6 @@ class SpamShield_Operations():
             status="success"
             )
 
-            monitor.record_model_existence_check(
-                is_success=True
-            )
             return report_data
 
         except Exception as e:
@@ -389,8 +383,4 @@ class SpamShield_Operations():
                 name="Vulgarize with llm the metrics",
                 status="failure",
                 error_type=e
-            )
-
-            monitor.record_model_existence_check(
-                is_success=False
             )

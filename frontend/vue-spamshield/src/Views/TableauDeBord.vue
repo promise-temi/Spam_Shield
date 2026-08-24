@@ -87,8 +87,8 @@
                         <GraphGaugeConfidence :confidence="dashbord_metrics?.metrics?.avg_confidence??0"></GraphGaugeConfidence>
                     </div>
                     <div class="confidence-spam-ham">
+                        <button @click="get_llm_report">Comprendre les métriques</button>
                         <pre>{{llmReport}}</pre>
-                        
                     </div>
                 </div>
             </div>
@@ -306,7 +306,7 @@ export default{
             .then(response => {
                 console.log(response.data)
                 this.dashbord_metrics = response.data.metrics
-                this.get_llm_report()
+                // this.get_llm_report()
             })
             .catch(error => {
                 console.error(error)

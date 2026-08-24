@@ -128,8 +128,25 @@ class Helpers_Monitoring:
             error_type="none"
         ).inc()
 
+
+
+    def record_http_error(self, endpoint, method, status_code):
+        """Enregistre une erreur HTTP par endpoint et code de statut."""
+        HTTP_ERRORS_COUNTER.labels(
+            endpoint=endpoint,
+            method=method,
+            status_code=str(status_code)
+        ).inc()
+
+    def record_unauthorized_attempt(self, endpoint, method):
+        """Enregistre une tentative d'accès non autorisée."""
+        UNAUTHORIZED_COUNTER.labels(
+            endpoint=endpoint,
+            method=method
+        ).inc()
+
     def record_model_retrain(self, is_success, error_type=None):
-        """Enregistre un réentraînement du modèle."""
+        """Enregistre le résultat d'un réentraînement du modèle."""
         if is_success:
             FUNCTION_RESULT.labels(
                 pipe_type="ML Pipeline",
@@ -146,7 +163,7 @@ class Helpers_Monitoring:
             ).inc()
 
     def record_virgin_model_training(self, is_success, error_type=None):
-        """Enregistre un entraînement de modèle vierge."""
+        """Enregistre le résultat de l'entraînement initial du modèle."""
         if is_success:
             FUNCTION_RESULT.labels(
                 pipe_type="ML Pipeline",
@@ -162,8 +179,8 @@ class Helpers_Monitoring:
                 error_type=type(error_type).__name__
             ).inc()
 
-    def record_model_existence_check(self, is_success, model_found=None, error_type=None):
-        """Enregistre la vérification d'existence du modèle dans MLflow."""
+    def record_model_existence_check(self, is_success, error_type=None):
+        """Enregistre le résultat de la vérification du modèle."""
         if is_success:
             FUNCTION_RESULT.labels(
                 pipe_type="ML Pipeline",
@@ -178,18 +195,3 @@ class Helpers_Monitoring:
                 status="failure",
                 error_type=type(error_type).__name__
             ).inc()
-
-    def record_http_error(self, endpoint, method, status_code):
-        """Enregistre une erreur HTTP par endpoint et code de statut."""
-        HTTP_ERRORS_COUNTER.labels(
-            endpoint=endpoint,
-            method=method,
-            status_code=str(status_code)
-        ).inc()
-
-    def record_unauthorized_attempt(self, endpoint, method):
-        """Enregistre une tentative d'accès non autorisée."""
-        UNAUTHORIZED_COUNTER.labels(
-            endpoint=endpoint,
-            method=method
-        ).inc()
