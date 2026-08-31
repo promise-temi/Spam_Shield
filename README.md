@@ -10,6 +10,7 @@ Avant d'installer SpamShield, vérifiez que les outils suivants sont disponibles
 - Docker et Docker Compose
 - Node.js et npm pour le frontend en environnement de développement
 - Git pour récupérer le projet
+- Postgres SQL
 
 ## Installation
 
