@@ -701,7 +701,7 @@ def test_retrain_model(mock_ops, client):
 
     assert response.status_code == 200
 
-    mock_ops.return_value.retrain_model.assert_called_once()
+    mock_ops.return_value.Retrain_All_Messages.assert_called_once()
 
 
 @patch("api.SpamShield_Operations")
