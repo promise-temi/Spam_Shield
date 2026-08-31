@@ -128,8 +128,6 @@ class Helpers_Monitoring:
             error_type="none"
         ).inc()
 
-
-
     def record_http_error(self, endpoint, method, status_code):
         """Enregistre une erreur HTTP par endpoint et code de statut."""
         HTTP_ERRORS_COUNTER.labels(

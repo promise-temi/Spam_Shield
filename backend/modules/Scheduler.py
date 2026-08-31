@@ -71,6 +71,23 @@ class Scheduler:
             f"{phase_start} -> {phase_end}"
         )
 
+    def phase_actions_end(self, phase_end=datetime.datetime.now()):
+        logging.info(f"Sauvegarde anonymisée des messages \n créés jusqu'au {phase_end} inclus.")
+        self.DB.save_anonimized_messages(before=phase_end)
+
+        logging.info(f"Suppression des messages \n créés jusqu'au {phase_end} inclus.")
+        self.DB.delete_phase_messages(before=phase_end)
+
+        logging.info("Création d'une nouvelle phase.")
+        self.set_new_phase()
+
+    def phase_actions_carence(self, phase_start=datetime.datetime.now(), phase_end=datetime.datetime.now(), carence_end=datetime.datetime.now()):
+        try:
+            self.mail_ops.send_report(phase_start, phase_end, carence_end)
+        except Exception as e:
+            logging.info("Aucune données pour réaliser un rapport")
+
+
 
     def check_phase(self, checkphase):
         current_date = datetime.datetime.now()
@@ -84,9 +101,7 @@ class Scheduler:
         # PHASE EN COURS
         
         if current_date <= phase_end:
-            logging.info(
-                "La phase est toujours en cours."
-            )
+            logging.info("La phase est toujours en cours.")
             return
 
 
@@ -94,24 +109,11 @@ class Scheduler:
         
 
         if phase_end < current_date < carence_end:
-            logging.info(
-                "La phase est terminée. "
-                "La période de carence est en cours."
-            )
+            logging.info("La phase est terminée. \n La période de carence est en cours.")
 
             if current_date >= phase_end + self.carence_message_delay:
-                logging.info(
-                    "Envoi du rapport de fin de phase."
-                )
-                try:
-                    self.mail_ops.send_report(
-                        phase_start,
-                        phase_end,
-                        carence_end
-                    )
-                except Exception as e:
-                    logging.info("Aucune données pour réaliser un rapport")
-
+                logging.info("Envoi du rapport de fin de phase.")
+                self.phase_actions_carence(phase_start, phase_end, carence_end)
             return
 
 
@@ -120,30 +122,7 @@ class Scheduler:
        
 
         if current_date >= carence_end:
-            logging.info(
-                "La période de carence est terminée."
-            )
+            logging.info("La période de carence est terminée.")
+            self.phase_actions_end(phase_end)
 
-            logging.info(
-                f"Sauvegarde anonymisée des messages "
-                f"créés jusqu'au {phase_end} inclus."
-            )
-
-            self.DB.save_anonimized_messages(
-                before=phase_end
-            )
-
-            logging.info(
-                f"Suppression des messages "
-                f"créés jusqu'au {phase_end} inclus."
-            )
-
-            self.DB.delete_phase_messages(
-                before=phase_end
-            )
-
-            logging.info(
-                "Création d'une nouvelle phase."
-            )
-
-            self.set_new_phase()
+            

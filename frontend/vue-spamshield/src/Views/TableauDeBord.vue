@@ -121,6 +121,7 @@
                         <option value="interdits">interdits</option>
                     </select>
                 </fieldset>
+                <button @click="flushMessages" class="flush-message">Flush</button>
             </div>
 
             <!-- MESSAGES -->
@@ -351,6 +352,21 @@ export default{
             .catch(error => {
                 console.error(error)
         })
+    },
+    flushMessages(){
+        const validation = confirm("Attention : cette action entraîne la suppression des messages de la phase actuelle. Les données nécessaires seront anonymisées et validées afin d’être prises en compte lors du prochain réentraînement du modèle. Cette action est irréversible.")
+        if (!validation){
+            return
+        }
+
+        api.get("/set_new_phase")
+            .then(response =>{
+                this.$router.go(0)
+            })
+            .catch(response =>{
+                console.error(error)
+            })
+        
     }
     },
     mounted(){
@@ -580,8 +596,8 @@ div.messages div.card{
     cursor: pointer;
 }
 
-div.messages div.card:hover{
-    /* border: solid #6FB8F8 1.2px;  */
+div.messages div.card:hover, div.messages div.card:active{
+    border: solid #6FB8F8 1.2px; 
 
 }
 
@@ -755,6 +771,10 @@ tr td{
     /* font-weight: 800; */
     opacity: 0.6;
     font-size: 16px;
+}
+
+button .flush-message{
+    padding: 2px;
 }
 
 

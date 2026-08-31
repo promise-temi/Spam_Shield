@@ -94,6 +94,8 @@ export default{
             api.post(`/new-message`, data)
             .then(result => {
                 console.log(result)
+                alert("Message envoyé avec succès")
+                this.text = ""
             })
             .catch(error => {
                 console.error(error)

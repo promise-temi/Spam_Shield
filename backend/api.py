@@ -57,25 +57,14 @@ app.add_middleware(
 
 
 @app.middleware("http")
-async def monitoring_middleware(
-    request: Request,
-    call_next
-):
+async def monitoring_middleware(request: Request, call_next):
     response = await call_next(request)
 
     if response.status_code == 401:
-        monitor.record_unauthorized_attempt(
-            endpoint=request.url.path,
-            method=request.method
-        )
+        monitor.record_unauthorized_attempt(endpoint=request.url.path, method=request.method)
 
     if response.status_code >= 400:
-        monitor.record_http_error(
-            endpoint=request.url.path,
-            method=request.method,
-            status_code=response.status_code
-        )
-
+        monitor.record_http_error(endpoint=request.url.path, method=request.method, status_code=response.status_code)
     return response
 
 
@@ -84,57 +73,29 @@ from prometheus_fastapi_instrumentator import Instrumentator
 Instrumentator().instrument(app).expose(app)
 
 
-def require_api_key(
-    x_api_key: str = Header(...)
-):
+def require_api_key(x_api_key: str = Header(...)):
     if not security.verify_api_key(x_api_key):
-        raise HTTPException(
-            status_code=401,
-            detail="Clé API invalide ou manquante."
-        )
+        raise HTTPException(status_code=401, detail="Clé API invalide ou manquante.")
 
 
-def require_session(
-    session_token: Optional[str] = Cookie(default=None)
-):
+def require_session(session_token: Optional[str] = Cookie(default=None)):
     if not session_token:
-        raise HTTPException(
-            status_code=401,
-            detail="Session absente."
-        )
-
-    token_hash = security.hash_value(
-        session_token
-    )
-
+        raise HTTPException(status_code=401, detail="Session absente.")
+    token_hash = security.hash_value(session_token)
     db = Postgres_DB()
-
-    session = db.get_session_by_token(
-        token_hash
-    )
+    session = db.get_session_by_token(token_hash)
 
     if not session:
-        raise HTTPException(
-            status_code=401,
-            detail="Session invalide."
-        )
+        raise HTTPException(status_code=401, detail="Session invalide.")
 
     session_id = session[0]
     email = session[1]
     expires_at = session[2]
 
-    if (
-        expires_at is None
-        or datetime.datetime.now() >= expires_at
-    ):
-        db.delete_session(
-            token_hash
-        )
+    if (expires_at is None or datetime.datetime.now() >= expires_at):
+        db.delete_session(token_hash)
 
-        raise HTTPException(
-            status_code=401,
-            detail="Session expirée."
-        )
+        raise HTTPException(status_code=401, detail="Session expirée.")
 
     return {
         "session_id": session_id,
@@ -708,20 +669,12 @@ def retrain_model(
     _=Depends(require_session)
 ):
     try:
-        SpamShield_Operations().retrain_model()
-
-        return JSONResponse(
-            status_code=200,
-            content={
-                "message": "ok"
-            }
-        )
-
+        SpamShield_Operations().Retrain_All_Messages()
+        return JSONResponse(status_code=200, content={"message": "ok"})
     except Exception as e:
         logging.exception(
             "Erreur lors du réentraînement du modèle IA."
         )
-
         raise HTTPException(
             status_code=500,
             detail=str(e)
@@ -729,26 +682,20 @@ def retrain_model(
 
 
 @app.get("/llm-report")
-def get_llm_report(
-    _=Depends(require_session)
-):
+def get_llm_report(_=Depends(require_session)):
     try:
-        report_data = (
-            SpamShield_Operations()
-            .llm_report()
-        )
-
-        return JSONResponse(
-            status_code=200,
-            content=report_data
-        )
-
+        report_data = (SpamShield_Operations().llm_report())
+        return JSONResponse(status_code=200, content=report_data)
     except Exception as e:
-        logging.exception(
-            "Erreur lors de la génération du rapport LLM."
-        )
+        logging.exception("Erreur lors de la génération du rapport LLM.")
+        raise HTTPException(status_code=500, detail=str(e))
 
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+
+@app.get("/set_new_phase")
+def set_new_phase(_=Depends(require_session)):
+    try:
+        SpamShield_Operations().Set_new_phase()
+        return JSONResponse(status_code=200, content={"message": "ok"})
+    except Exception as e:
+        logging.exception("Erreur lors de la création de nouvelle phase")
+        raise HTTPException(status_code=500, detail=str(e))

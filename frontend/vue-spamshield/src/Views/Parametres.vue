@@ -307,7 +307,7 @@ export default{
         },
 
         retrainModel(){
-            if(this.modelInfos.training_data > 15){
+            if(this.modelInfos.training_data +1 > 10){
                 api.get("/retrain_model")
                 .then(result => {
                     console.log(result)
@@ -317,7 +317,7 @@ export default{
                 })
             }
             else{
-                alert("Pas assez de données pour réentraîner le modèle. Au moins 15 exemples sont nécessaires. Utilisez le banc de test pour ajouter des exemples ou attendez de nouveaux messages.")
+                alert("Pas assez de données pour réentraîner le modèle. Au moins 10 exemples sont nécessaires. Utilisez le banc de test pour ajouter des exemples ou attendez de nouveaux messages.")
             }
         }
 

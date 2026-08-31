@@ -15,6 +15,7 @@ from NLP_Feat_Eng import NLP_Feat_Eng
 from ML_Flow import ML_Flow_Operations
 from Helpers_Monitoring import Helpers_Monitoring
 from modules.LLModel import LLMModel
+from Scheduler import Scheduler
 monitor = Helpers_Monitoring()
 
 class SpamShield_Operations():
@@ -317,48 +318,55 @@ class SpamShield_Operations():
             logging.error(f"Erreur lors du test du nouveau message : {e}")
             monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="ML Test New Message", status="failure", error_type=e)
 
-
     def check_model_existence(self):
         model_path = f"{Model().artifact_path}/model.pkl"
+        max_attempts = 5
+        delay_seconds = 5
+        last_error = None
 
-        try:
-            model_exist = os.path.exists(model_path)
+        for attempt in range(1, max_attempts + 1):
+            try:
+                logging.info(f"Vérification du modèle - tentative {attempt}/{max_attempts}")
+                model_exist = os.path.exists(model_path)
+                if not model_exist:
+                    logging.info("Aucun modèle existant en local, création du modèle initial.")
+                    self.virgin_model()
+                else:
+                    logging.info("Modèle existant trouvé en local.")
+                monitor.record_model_existence_check(is_success=True)
+                monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Check Model Existence", status="success")
+                return
+            except Exception as e:
+                last_error = e
+                logging.warning(f"Échec de la tentative {attempt}/{max_attempts} \n lors de la vérification/initialisation du modèle : {e}")
 
-            if not model_exist:
-                logging.info(
-                    "Aucun modèle existant en local, création du modèle initial."
-                )
-                self.virgin_model()
-            else:
-                logging.info(
-                    "Modèle existant trouvé en local."
-                )
-            monitor.record_model_existence_check(is_success=True)
-            monitor.record_methode_result(
-                pipe_type="Spamshield Operations",
-                is_success=True,
-                name="Check Model Existence",
-                status="success"
-            )
+                if attempt < max_attempts:
+                    logging.info(f"Nouvelle tentative dans {delay_seconds} secondes.")
+                    time.sleep(delay_seconds)
+
+
+        # Toutes les tentatives ont échoué
+        logging.error(
+            f"Impossible de vérifier ou initialiser le modèle "
+            f"après {max_attempts} tentatives : {last_error}"
+        )
+
+        monitor.record_model_existence_check(
+            is_success=False,
+            error_type=last_error
+        )
+
+        monitor.record_methode_result(
+            pipe_type="Spamshield Operations",
+            is_success=False,
+            name="Check Model Existence",
+            status="failure",
+            error_type=last_error
+        )
+
+        raise last_error
 
             
-        except Exception as e:
-            logging.error(
-                f"Erreur lors de la vérification du modèle local : {e}"
-            )
-            monitor.record_model_existence_check(is_success=False, error_type=e)
-
-            monitor.record_methode_result(
-                pipe_type="Spamshield Operations",
-                is_success=False,
-                name="Check Model Existence",
-                status="failure",
-                error_type=e
-            )
-            raise
-
-            
-
 
     def llm_report(self):
         try:
@@ -384,3 +392,12 @@ class SpamShield_Operations():
                 status="failure",
                 error_type=e
             )
+
+    def Set_new_phase(self):
+        try:
+            Scheduler().phase_actions_carence()
+            Scheduler().phase_actions_end()
+            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Set_New_Phase", status="success")
+        except Exception as e:
+            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Set_New_Phase", status="failure", error_type=e)
+            raise
