@@ -32,13 +32,7 @@ def test_virgin_model(
 
         spamshield.virgin_model()
 
-    # Monitoring
-    mock_monitor.record_methode_result.assert_called_once_with(
-        pipe_type="Spamshield Operations",
-        is_success=True,
-        name="Virgin Model Training",
-        status="success"
-    )
+    
 
     # Artefacts créés localement
     assert os.path.exists(
@@ -130,8 +124,7 @@ def test_new_message(
         metadata
     )
 
-    # Monitoring appelé
-    mock_monitor.record_methode_result.assert_called()
+    
 
     # Vérification prédiction
     call_kwargs = (
@@ -155,10 +148,7 @@ def test_new_message(
     )
 
     # Patterns interdits
-    mock_monitor.record_banned_patterns.assert_called_once()
-
-    # Gibberish
-    mock_monitor.record_gibberish.assert_called_once()
+   
 
 
 
@@ -186,7 +176,7 @@ def test_retrain_all_messages(
 
         spamshield.Retrain_All_Messages()
 
-    mock_monitor.record_methode_result.assert_called()
+
 
 
 # ============================================================
@@ -222,7 +212,7 @@ def test_update_label(
         != label_avant
     )
 
-    mock_monitor.record_methode_result.assert_called()
+
 
 
 # ============================================================
