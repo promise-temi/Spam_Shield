@@ -32,8 +32,6 @@ def test_virgin_model(
 
         spamshield.virgin_model()
 
-    
-
     # Artefacts créés localement
     assert os.path.exists(
         "backend/tests/test_ressources/model.pkl"
@@ -59,6 +57,7 @@ def test_virgin_model(
 # ============================================================
 # TEST NEW MESSAGE
 # ============================================================
+
 def test_new_message(
     spamshield,
     test_db,
@@ -66,18 +65,18 @@ def test_new_message(
     mock_monitor,
     monkeypatch,
 ):
-    # ============================================================
+    # ========================================================
     # MODEL DE TEST
-    # ============================================================
+    # ========================================================
 
     monkeypatch.setattr(
         "modules.SpamShield_Operations.Model",
         lambda **kwargs: test_model_pred
     )
 
-    # ============================================================
+    # ========================================================
     # MESSAGE
-    # ============================================================
+    # ========================================================
 
     message = pd.DataFrame(
         [
@@ -96,9 +95,9 @@ def test_new_message(
         "form_id": "test"
     }
 
-    # ============================================================
+    # ========================================================
     # DATABASE DE TEST
-    # ============================================================
+    # ========================================================
 
     monkeypatch.setattr(
         "modules.SpamShield_Operations.Postgres_DB",
@@ -120,9 +119,9 @@ def test_new_message(
         lambda *args, **kwargs: test_db
     )
 
-    # ============================================================
+    # ========================================================
     # MOCK DE save_message
-    # ============================================================
+    # ========================================================
 
     save_message_mock = MagicMock()
 
@@ -132,9 +131,9 @@ def test_new_message(
         save_message_mock
     )
 
-    # ============================================================
+    # ========================================================
     # MAIL MOCKÉ
-    # ============================================================
+    # ========================================================
 
     mock_mail = MagicMock()
 
@@ -143,53 +142,124 @@ def test_new_message(
         lambda: mock_mail
     )
 
-    # ============================================================
+    # ========================================================
     # EXECUTION
-    # ============================================================
+    # ========================================================
 
     spamshield.New_Message(
         message,
         metadata
     )
 
-    # ============================================================
+    # ========================================================
     # VERIFICATIONS
-    # ============================================================
+    # ========================================================
 
-    # Vérifie qu'un message a bien été envoyé à save_message()
+    # New_Message doit tenter de sauvegarder exactement
+    # un message
     save_message_mock.assert_called_once()
 
-    # Récupère les paramètres transmis à save_message()
+    # On récupère tout ce qui a été donné à save_message()
     call_kwargs = save_message_mock.call_args.kwargs
 
-    # Le label final doit être spam ou ham
-    assert call_kwargs["final_label"] in [True, False]
+    # --------------------------------------------------------
+    # LABEL FINAL
+    # --------------------------------------------------------
 
-    # La confiance du modèle doit être numérique
+    assert "final_label" in call_kwargs
+
+    assert call_kwargs["final_label"] in [
+        True,
+        False
+    ]
+
+    # --------------------------------------------------------
+    # SCORE DE CONFIANCE
+    # --------------------------------------------------------
+
+    assert "model_confidence" in call_kwargs
+
     assert isinstance(
         call_kwargs["model_confidence"],
         float
     )
 
-    # La confiance doit être comprise entre 0 et 1
     assert (
         0.0
         <= call_kwargs["model_confidence"]
         <= 1.0
     )
 
-    # Le texte brut sauvegardé doit correspondre au message
+    # --------------------------------------------------------
+    # TEXTE ORIGINAL
+    # --------------------------------------------------------
+
+    assert "raw_text" in call_kwargs
+
     assert (
         call_kwargs["raw_text"]
         == "je suis un test"
     )
 
-    # Les métadonnées doivent être celles fournies
+    # --------------------------------------------------------
+    # METADATA
+    # --------------------------------------------------------
+
+    assert "metadata" in call_kwargs
+
     assert (
         call_kwargs["metadata"]
         == metadata
     )
 
+    # --------------------------------------------------------
+    # PREDICTION MODEL
+    # --------------------------------------------------------
+
+    assert "model_pred" in call_kwargs
+
+    assert isinstance(
+        call_kwargs["model_pred"],
+        bool
+    )
+
+    # --------------------------------------------------------
+    # BUSINESS RULES
+    # --------------------------------------------------------
+
+    assert "business_rules_label" in call_kwargs
+
+    assert isinstance(
+        call_kwargs["business_rules_label"],
+        bool
+    )
+
+    # --------------------------------------------------------
+    # OVERRIDE
+    # --------------------------------------------------------
+
+    assert "is_overridden" in call_kwargs
+
+    # --------------------------------------------------------
+    # TEXTE PREPROCESSE
+    # --------------------------------------------------------
+
+    assert "pred_text" in call_kwargs
+
+    assert isinstance(
+        call_kwargs["pred_text"],
+        str
+    )
+
+    assert len(
+        call_kwargs["pred_text"]
+    ) > 0
+
+    # --------------------------------------------------------
+    # PATTERNS INTERDITS
+    # --------------------------------------------------------
+
+    assert "banned_patterns_found" in call_kwargs
 
 
 # ============================================================
@@ -217,8 +287,6 @@ def test_retrain_all_messages(
         spamshield.Retrain_All_Messages()
 
 
-
-
 # ============================================================
 # UPDATE LABEL
 # ============================================================
@@ -237,14 +305,19 @@ def test_update_label(
     )
 
     premier_id = messages[0]["id"]
-    label_avant = messages[0]["final_label"]
+
+    label_avant = (
+        messages[0]["final_label"]
+    )
 
     spamshield.Update_label(
         premier_id
     )
 
-    message_apres = spamshield.Select_Message(
-        premier_id
+    message_apres = (
+        spamshield.Select_Message(
+            premier_id
+        )
     )
 
     assert (
@@ -253,20 +326,24 @@ def test_update_label(
     )
 
 
-
-
 # ============================================================
 # REGEX
 # ============================================================
 
-def test_add_regex_rule(spamshield):
-    pattern_test = "crypto.*gratuit.*test"
+def test_add_regex_rule(
+    spamshield
+):
+    pattern_test = (
+        "crypto.*gratuit.*test"
+    )
 
     spamshield.Add_Regex_Rule(
         pattern_test
     )
 
-    regexes = spamshield.Get_All_Regex_Rules()
+    regexes = (
+        spamshield.Get_All_Regex_Rules()
+    )
 
     patterns = [
         r["pattern"]
@@ -275,11 +352,18 @@ def test_add_regex_rule(spamshield):
         for r in regexes
     ]
 
-    assert pattern_test in patterns
+    assert (
+        pattern_test
+        in patterns
+    )
 
 
-def test_get_all_regex_rules(spamshield):
-    result = spamshield.Get_All_Regex_Rules()
+def test_get_all_regex_rules(
+    spamshield
+):
+    result = (
+        spamshield.Get_All_Regex_Rules()
+    )
 
     assert isinstance(
         result,
@@ -287,14 +371,20 @@ def test_get_all_regex_rules(spamshield):
     )
 
 
-def test_delete_regex_rule(spamshield):
-    pattern_test = "pattern-a-supprimer"
+def test_delete_regex_rule(
+    spamshield
+):
+    pattern_test = (
+        "pattern-a-supprimer"
+    )
 
     spamshield.Add_Regex_Rule(
         pattern_test
     )
 
-    regexes = spamshield.Get_All_Regex_Rules()
+    regexes = (
+        spamshield.Get_All_Regex_Rules()
+    )
 
     regex_a_suppr = next(
         r
@@ -326,7 +416,9 @@ def test_delete_regex_rule(spamshield):
 # DESTINATAIRES
 # ============================================================
 
-def test_get_all_destinataires(spamshield):
+def test_get_all_destinataires(
+    spamshield
+):
     result = (
         spamshield
         .Get_All_Destinataires()
@@ -338,7 +430,9 @@ def test_get_all_destinataires(spamshield):
     )
 
 
-def test_add_destinataire(spamshield):
+def test_add_destinataire(
+    spamshield
+):
     email_test = (
         "nouveau-test@spamshield.fr"
     )
@@ -365,7 +459,9 @@ def test_add_destinataire(spamshield):
     )
 
 
-def test_delete_destinataire(spamshield):
+def test_delete_destinataire(
+    spamshield
+):
     email_test = (
         "a-supprimer@spamshield.fr"
     )
@@ -409,8 +505,12 @@ def test_delete_destinataire(spamshield):
 # DASHBOARD
 # ============================================================
 
-def test_dashboard(spamshield):
-    result = spamshield.Dashbord()
+def test_dashboard(
+    spamshield
+):
+    result = (
+        spamshield.Dashbord()
+    )
 
     assert isinstance(
         result,
@@ -423,7 +523,9 @@ def test_dashboard(spamshield):
 # ============================================================
 
 @pytest.fixture
-def fake_required_metadata(tmp_path):
+def fake_required_metadata(
+    tmp_path
+):
     contenu = {
         "name": False,
         "surname": False,
@@ -484,9 +586,20 @@ def test_form_requirements(
         .Form_Requirements()
     )
 
-    assert result["email"] is True
-    assert result["name"] is False
-    assert result["gibberish"] is False
+    assert (
+        result["email"]
+        is True
+    )
+
+    assert (
+        result["name"]
+        is False
+    )
+
+    assert (
+        result["gibberish"]
+        is False
+    )
 
 
 def test_update_form_requirements(
