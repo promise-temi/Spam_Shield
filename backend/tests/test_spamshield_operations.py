@@ -126,13 +126,7 @@ def test_new_message(
 
     
 
-    # Vérification prédiction
-    call_kwargs = (
-        mock_monitor
-        .record_prediction
-        .call_args
-        .kwargs
-    )
+    
 
     assert call_kwargs["final_label"] in [0, 1]
 
