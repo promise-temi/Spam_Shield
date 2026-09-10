@@ -53,9 +53,22 @@
                         
                     </div>
                 </div>
-                <button>Envoyer</button>
+                <button type="submit" :disabled="envoiMessageEnCours">
+                    {{ envoiMessageEnCours ? "Envoi..." : "Envoyer" }}
+                </button>
+                <p v-if="statutMessage" class="statut-message">{{ statutMessage }}</p>
             </form>
-            
+        </section>
+        <section class="inport-data-test card-deco" style="position: relative;">
+            <h3>Insérer un fichier JSON de simulation</h3>
+            <input type="file" id="messagesJson" accept=".json,application/json" @change="select_json_file">
+            <button type="button" @click="send_json_messages" :disabled="envoiEnCours">{{ envoiEnCours ? "Envoi en cours..." : "Envoyer" }}</button>
+            <div v-if="envoiEnCours || progression > 0" class="progression-import">
+                <p>Message {{ messageActuel }} / {{ totalMessages }}</p>
+                <progress :value="progression" max="100"></progress>
+                <p>{{ progression }} %</p>
+                <p v-if="messageEnCours">Envoi : {{ messageEnCours }}</p>
+            </div>
         </section>
     </main>
 </template>
@@ -77,12 +90,33 @@ export default{
                     form_id : 'test'
                 },
                 text : ''
-            }
+            },
+            jsonFile: null,
+            envoiEnCours: false,
+            messageActuel: 0,
+            totalMessages: 0,
+            progression: 0,
+            messageEnCours: "",
+            envoiMessageEnCours: false,
+            statutMessage: "",
         }
     },
     methods:{
-        test_new_message(){
-            let data = {
+        reset_form(){
+            this.data = {
+                metadata : {
+                    name : '',
+                    surname : '',
+                    subject : '- TEST -  ',
+                    email : '',
+                    phone : '',
+                    form_id : 'test'
+                },
+                text : ''
+            }
+        },
+        async test_new_message(){
+            const data = {
                 message : this.data.text,
                 metadata : this.data.metadata,
                 settings : {
@@ -91,16 +125,85 @@ export default{
                 }
             }
 
-            api.post(`/new-message`, data)
-            .then(result => {
+            try {
+                this.envoiMessageEnCours = true
+                this.statutMessage = "Envoi du message..."
+                const result = await api.post("/new-message", data)
                 console.log(result)
-                alert("Message envoyé avec succès")
-                this.text = ""
-            })
-            .catch(error => {
+                this.reset_form()
+                this.statutMessage = "Message envoyé avec succès ✅"
+            } 
+            catch(error) {
                 console.error(error)
-            })
-        }
+                this.statutMessage = "Erreur pendant l'envoi du message ❌"
+            } 
+            finally {
+                this.envoiMessageEnCours = false
+            }
+        },
+
+        select_json_file(event){
+            this.jsonFile = event.target.files[0]
+            this.messageActuel = 0
+            this.totalMessages = 0
+            this.progression = 0
+            this.messageEnCours = ""
+        },
+
+
+        async send_json_messages(){
+            if(!this.jsonFile){
+                alert("Sélectionnez d'abord un fichier JSON")
+                return
+            }
+
+            try {
+                const fileText = await this.jsonFile.text()
+                const messages = JSON.parse(fileText)
+                if(!Array.isArray(messages)){
+                    throw new Error("Le fichier JSON doit contenir une liste de messages")
+                }
+
+
+                this.envoiEnCours = true
+                this.totalMessages = messages.length
+                this.messageActuel = 0
+                this.progression = 0
+                this.messageEnCours = ""
+
+                for(let i = 0; i < messages.length; i++){
+                    const message = messages[i]
+                    this.messageActuel = i + 1
+                    this.messageEnCours = message.text
+                    const data = {
+                        message : message.text,
+                        metadata : message.metadata,
+                        settings : {
+                            entrainementModel : this.entrainementModel,
+                            recevoirParMail : this.recevoirParMail
+                        }
+                    }
+
+                    console.log(`Envoi ${i + 1}/${messages.length}`, message.text)
+
+                    await api.post("/new-message", data)
+
+                    this.progression = Math.round(((i + 1) / messages.length) * 100)
+
+                }
+
+                this.envoiEnCours = false
+                this.messageEnCours = ""
+
+                alert(`${messages.length} messages envoyés avec succès`)
+            } 
+            catch(error) {
+                console.error(error)
+                this.envoiEnCours = false
+                alert("Erreur pendant l'import du fichier JSON")
+            }
+        },
+
     }
 }
 </script>

@@ -87,8 +87,19 @@
                         <GraphGaugeConfidence :confidence="dashbord_metrics?.metrics?.avg_confidence??0"></GraphGaugeConfidence>
                     </div>
                     <div class="confidence-spam-ham">
-                        <button @click="get_llm_report">Comprendre les métriques</button>
-                        <pre>{{llmReport}}</pre>
+                        <button @click="get_llm_report" :disabled="llmLoading">{{ llmLoading ? "Analyse en cours..." : "Comprendre les métriques" }}</button>
+                        <div
+                            v-if="llmReport || llmLoading" class="llm-report">
+                            <div class="llm-report-header">
+                                <span>Analyse IA</span>
+                                <span>{{ llmLoading ? '⏳' : '✦' }}</span>
+                            </div>
+
+                            <div class="llm-report-content">
+                                <p v-if="llmLoading">Génération de l'analyse...</p>
+                                <p v-else>{{ llmReport }}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -127,29 +138,19 @@
             <!-- MESSAGES -->
             <div class="messages">
                 <!-- SELECTED MESSAGE -->
-                <div v-for="message in messages" class="card selected-card  card-deco" @click="get_selected_message(message.id)">
-                    <h3>
-                        <svg style="position: relative; top: 2px;" xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
-                            <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
-                        </svg>
-
-                        {{message.final_label?'Indésirable':'Légitime'}}
-                    </h3>
+                <div v-for="message in messages" :key="message.id" class="card card-deco" :class="{ 'selected-card': selectedMessageId === message.id }" @click="get_selected_message(message.id)">
+                    <h3>{{ message.final_label ? 'Indésirable' : 'Légitime' }}</h3>
                     <span class="date">{{ formatDate(message.date) }}</span>
-                    <p class="mail">{{message.metadata.email}}</p>
-                    <p class="message-resume">{{message.metadata.subject}}</p>
+                    <p class="mail">{{ message.metadata.email }}</p>
+                    <p class="message-resume">{{ message.metadata.subject }}</p>
                 </div>
-                
             </div>
         </div>
         <div class="message-et-info">
-            
-            
             <div class="table-et-message">
                 <!-- TABLE -->
                 <div class="table-metrics">
                     <table class="card-deco">
-
                         <!-- LABEL FINAL -->
                         <tr class="label-final">
                             <th class="metrics-head">
@@ -292,7 +293,9 @@ export default{
             trier_par: "date_desc",
             filtrer_par: "*",
             selected_message: {},
-            llmReport:''
+            llmReport:'',
+            selectedMessageId: null,
+            llmLoading: false,
         }
     },
     components:{
@@ -324,9 +327,10 @@ export default{
             })
         },
         get_selected_message(selected_message_id){
+            this.selectedMessageId = selected_message_id
+
             api.get(`/get_message-and-related-metrics/${selected_message_id}`)
             .then(response => {
-                console.log(response.data)
                 this.selected_message = response.data.selected_message
             })
             .catch(error => {
@@ -344,15 +348,20 @@ export default{
             })
         },
         get_llm_report(){
-        api.get(`/llm-report`)
-            .then(response => {
+            this.llmLoading = true
+            this.llmReport = ""
+
+            api.get("/llm-report").then(response => {
                 this.llmReport = response.data.llm_response
-                
             })
             .catch(error => {
                 console.error(error)
-        })
-    },
+                this.llmReport = "Impossible de générer l'analyse."
+            })
+            .finally(() => {
+                this.llmLoading = false
+            })
+        },
     flushMessages(){
         const validation = confirm("Attention : cette action entraîne la suppression des messages de la phase actuelle. Les données nécessaires seront anonymisées et validées afin d’être prises en compte lors du prochain réentraînement du modèle. Cette action est irréversible.")
         if (!validation){
@@ -779,4 +788,65 @@ button .flush-message{
 
 
 
+
+
+/* message */
+div.messages div.card{
+  transition: 0.15s ease;
+}
+
+div.messages div.card:hover{
+  border: 1px solid #6FB8F8;
+  background-color: #f8faff;
+}
+
+div.messages div.selected-card{
+  background-color: #f1f3ff;
+  border: 1px solid #4D5AF7;
+}
+
+div.messages div.selected-card::before{
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  background-color: #4D5AF7;
+  border-radius: 5px 0 0 5px;
+}
+
+
+/* llm */
+div.llm-report{
+  background-color: #3842b2e6;
+  border: 1px solid #b0ccfd81;
+  border-radius: 8px;
+  color: white;
+  overflow: hidden;
+}
+
+div.llm-report-header{
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  border-bottom: 1px solid #ffffff2f;
+}
+
+div.llm-report-content{
+  max-height: 110px;
+  overflow-y: auto;
+  padding: 10px 12px;
+}
+
+div.llm-report-content p{
+  margin: 0;
+  color: white;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 </style>
