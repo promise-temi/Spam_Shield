@@ -59,7 +59,6 @@ def test_virgin_model(
 # ============================================================
 # TEST NEW MESSAGE
 # ============================================================
-
 def test_new_message(
     spamshield,
     test_db,
@@ -67,11 +66,18 @@ def test_new_message(
     mock_monitor,
     monkeypatch,
 ):
-    # Forcer SpamShield_Operations à utiliser le modèle de test
+    # ============================================================
+    # MODEL DE TEST
+    # ============================================================
+
     monkeypatch.setattr(
         "modules.SpamShield_Operations.Model",
         lambda **kwargs: test_model_pred
     )
+
+    # ============================================================
+    # MESSAGE
+    # ============================================================
 
     message = pd.DataFrame(
         [
@@ -90,7 +96,10 @@ def test_new_message(
         "form_id": "test"
     }
 
-    # DB de test
+    # ============================================================
+    # DATABASE DE TEST
+    # ============================================================
+
     monkeypatch.setattr(
         "modules.SpamShield_Operations.Postgres_DB",
         lambda *args, **kwargs: test_db
@@ -111,7 +120,22 @@ def test_new_message(
         lambda *args, **kwargs: test_db
     )
 
-    # Mail mocké
+    # ============================================================
+    # MOCK DE save_message
+    # ============================================================
+
+    save_message_mock = MagicMock()
+
+    monkeypatch.setattr(
+        test_db,
+        "save_message",
+        save_message_mock
+    )
+
+    # ============================================================
+    # MAIL MOCKÉ
+    # ============================================================
+
     mock_mail = MagicMock()
 
     monkeypatch.setattr(
@@ -119,30 +143,52 @@ def test_new_message(
         lambda: mock_mail
     )
 
+    # ============================================================
+    # EXECUTION
+    # ============================================================
+
     spamshield.New_Message(
         message,
         metadata
     )
 
-    
+    # ============================================================
+    # VERIFICATIONS
+    # ============================================================
 
-    
+    # Vérifie qu'un message a bien été envoyé à save_message()
+    save_message_mock.assert_called_once()
 
-    assert call_kwargs["final_label"] in [0, 1]
+    # Récupère les paramètres transmis à save_message()
+    call_kwargs = save_message_mock.call_args.kwargs
 
+    # Le label final doit être spam ou ham
+    assert call_kwargs["final_label"] in [True, False]
+
+    # La confiance du modèle doit être numérique
     assert isinstance(
-        call_kwargs["confidence_score"],
+        call_kwargs["model_confidence"],
         float
     )
 
+    # La confiance doit être comprise entre 0 et 1
     assert (
         0.0
-        <= call_kwargs["confidence_score"]
+        <= call_kwargs["model_confidence"]
         <= 1.0
     )
 
-    # Patterns interdits
-   
+    # Le texte brut sauvegardé doit correspondre au message
+    assert (
+        call_kwargs["raw_text"]
+        == "je suis un test"
+    )
+
+    # Les métadonnées doivent être celles fournies
+    assert (
+        call_kwargs["metadata"]
+        == metadata
+    )
 
 
 
