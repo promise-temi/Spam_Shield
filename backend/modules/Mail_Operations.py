@@ -69,7 +69,18 @@ class Mail_Operations:
         
 
     
-    
+    def report_intro(self, phase_start, phase_end):
+        if not phase_start:
+            return f"Voici votre rapport SpamShield concernant les messages arrivés avant le {phase_end}."
+        else:
+            return f"Voici votre rapport SpamShield pour la période du {phase_start} au {phase_end}."
+
+    def report_deadline(self, deadline):
+        if bool(deadline) == True:
+            return f"Vous avez jusqu'au {deadline} pour vérifier et corriger les messages avant leur suppression définitive."
+
+
+        
 
     def send_report(self, phase_start, phase_end, deadline):
         logging.info("Début Envoi Rapport")
@@ -146,7 +157,7 @@ class Mail_Operations:
             msg.set_content(
                 f"""Bonjour,
 
-    Voici votre rapport SpamShield pour la période du {phase_start} au {phase_end}.
+    {self.report_intro(phase_start, phase_end)}
 
     Analyse de SpamShield Advisor :
 
@@ -175,7 +186,7 @@ class Mail_Operations:
     Nombre d'exemples d'entraînement : {training_nb if training_nb is not None else "Non disponible"}
 
 
-    Vous avez jusqu'au {deadline} pour vérifier et corriger les messages avant leur suppression définitive.
+    {self.report_deadline(deadline)}
 
     À bientôt,
 
@@ -211,9 +222,7 @@ class Mail_Operations:
                     <p>Bonjour,</p>
 
                     <p style="line-height: 1.6;">
-                        Voici votre rapport SpamShield pour la période
-                        <strong>{phase_start}</strong> au
-                        <strong>{phase_end}</strong>.
+                        {self.report_intro(phase_start, phase_end)}
                     </p>
 
                     <h2 style="margin-top: 30px;">

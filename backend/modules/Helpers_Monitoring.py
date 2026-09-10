@@ -1,6 +1,6 @@
 import time
 import logging
-from prometheus_client import Histogram, Counter, REGISTRY
+from prometheus_client import Histogram, Counter, REGISTRY, Gauge
 
 def _get_or_create(cls, name, doc, labelnames=[], **kwargs):
     """Récupère une métrique existante ou en crée une nouvelle — évite le crash au reload uvicorn."""
@@ -8,67 +8,111 @@ def _get_or_create(cls, name, doc, labelnames=[], **kwargs):
         return REGISTRY._names_to_collectors[name]
     return cls(name, doc, labelnames, **kwargs)
 
-FUNCTION_DURATION = _get_or_create(
-    Histogram,
-    "spamshield_function_duration_seconds",
-    "Temps d'exécution des fonctions instrumentées par le décorateur calculate_func_time",
-    ["function_name"],
-)
-
-FUNCTION_RESULT = _get_or_create(
-    Counter,
-    "spamshield_function_result_total",
-    "Résultat d'exécution des fonctions",
-    ["pipe_type", "function_name", "status", "error_type"],
-)
-
-PREDICTION_COUNTER = _get_or_create(
-    Counter,
-    "spamshield_predictions_total",
-    "Nombre de prédictions effectuées",
-    ["final_label", "model_pred", "business_rules_triggered", "is_overridden"]
-)
-
-CONFIDENCE_HISTOGRAM = _get_or_create(
-    Histogram,
-    "spamshield_confidence_score",
-    "Distribution du score de confiance du modèle",
-    ["final_label"],
-    buckets=[0.5, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 0.99]
-)
-
-GIBBERISH_SCORE_HISTOGRAM = _get_or_create(
-    Histogram,
-    "spamshield_gibberish_score",
-    "Distribution du score de charabia détecté par les règles métier",
-    buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-)
-
-BANNED_PATTERNS_COUNTER = _get_or_create(
-    Counter,
-    "spamshield_banned_patterns_total",
-    "Patterns interdits et anomalies détectés par les règles métier",
-    ["anomaly_type"]
-)
-
-HTTP_ERRORS_COUNTER = _get_or_create(
-    Counter,
-    "spamshield_http_errors_total",
-    "Erreurs HTTP par endpoint et code de statut",
-    ["endpoint", "method", "status_code"]
-)
-
-UNAUTHORIZED_COUNTER = _get_or_create(
-    Counter,
-    "spamshield_unauthorized_attempts_total",
-    "Tentatives d'accès non autorisées (clé API invalide ou manquante)",
-    ["endpoint", "method"]
-)
 
 
 class Helpers_Monitoring:
     def __init__(self):
-        pass
+        # Métriques pour le suivi des prédictions
+        self.MODEL_PREDICTION_INFERENCE = _get_or_create(
+            Gauge, 
+            "model_pred_inference", 
+            "Temps d'inférence à un instant T"
+        )
+
+        self.TOTAL_SPAM_PREDICTIONS = _get_or_create(
+            Counter,
+            "spam_Total_predictions",
+            "Total des messages SPAMS",
+            ['Model', 'B_Rules']
+        )
+
+        self.TOTAL_HAM_PREDICTIONS = _get_or_create(
+            Counter,
+            "ham_Total_predictions",
+            "Total des messages HAM"
+        )
+
+        self.CONFIDENCE_SCORE = _get_or_create(
+            Gauge,
+            "Confidence_score",
+            "Score de confiance à un instant T"
+        )
+
+        self.TOTAL_MESSAGE = _get_or_create(
+            Counter,
+            "Total_Messages",
+            "Nombre total de messages recu officielement"
+        )
+
+        self.MESSAGE_FAILS = _get_or_create(
+            Gauge,
+            "Total_Messages_fails",
+            "Nombre total de pipeline de mesages échouée"
+        )
+
+        # Métriques pour le suivi du model lors de l'entrainement et réentrainement
+        self.CHECK_MODEL_EXISTANCE_FAILS = _get_or_create(
+            Gauge,
+            "check_model_existance",
+            "Nombre total de fois ou l'existance du model à été vérifiée à un instant T et a été un echec"
+        )
+
+        self.RETRAIN_PIPELINE_FAILS = _get_or_create(
+            Gauge,
+            "retrain_pipeline_fails",
+            "Nombre total de fois ou le réentrainement à échoué à un instant T"
+        )
+
+        self.INITIAL_TRAIN_FAILS = _get_or_create(
+            Gauge,
+            "train_pipeline_fails",
+            "Nombre total de fois ou l'entrainement à échoué à un instant T"
+        )
+
+        self.TOTAL_INITIAL_TRAINS = _get_or_create(
+            Counter,
+            'initial_trains_total',
+            'Nombre total de fois où il y a eu un entrainement de model vierge'
+        )
+
+        self.TOTAL_RETRAINS = _get_or_create(
+            Counter,
+            'retrains_total',
+            'Nombre total de réentrainements'
+        )
+
+        self.TOTAL_LLM_CALLS = _get_or_create(
+            Counter,
+            'llm_calls_total',
+            'Nombre total d appel llm'
+        )
+
+        self.TOTAL_LLM_CALLS_FAILS = _get_or_create(
+            Gauge,
+            'llm_call_fail',
+            'Nombre de fois ou le llm à échoué'
+        )
+
+        self.FLUSH_MESSAGES_FAIL = _get_or_create(
+            Gauge,
+            'forced_new_phase_fail',
+            'La fonctionalité de flush a échoué ou non'
+        )
+
+        # monitoring API
+        self.UNAUTHORIZED = _get_or_create(
+            Counter,
+            'unauthorized_access_tentative',
+            'Session expiré, clé API invalide'
+        )
+
+        self.FORBIDEN = _get_or_create(
+            Counter,
+            'forbidden_user_tentative',
+            'Utilisateur non autorisé à acceder a une ressources, identifié mais accès interdit'
+        )
+
+
 
     def calculate_func_time(self, Methode_):
         """Décorateur qui mesure le temps d'exécution d'une fonction."""
@@ -81,115 +125,6 @@ class Helpers_Monitoring:
                 raise e
             finally:
                 duration_seconds = time.time() - start
-                logging.info(f"{Methode_.__name__} : {duration_seconds / 60:.4f} minutes")
-                FUNCTION_DURATION.labels(function_name=Methode_.__name__).observe(duration_seconds)
+                logging.info(f"{Methode_.__name__} : {duration_seconds / 60:.4f} minutes")     
         return wrapper
 
-    def record_methode_result(self, pipe_type, is_success, name, status, error_type=None):
-        """Enregistre le résultat d'exécution d'une méthode dans Prometheus."""
-        if is_success:
-            FUNCTION_RESULT.labels(pipe_type=pipe_type, function_name=name, status=status, error_type="none").inc()
-        else:
-            FUNCTION_RESULT.labels(pipe_type=pipe_type, function_name=name, status=status, error_type=type(error_type).__name__).inc()
-
-    def record_prediction(self, final_label, model_pred, business_rules_triggered, is_overridden, confidence_score):
-        """Enregistre les compteurs de prédictions + distribution du score de confiance."""
-        label_str = "spam" if final_label == 1 else "ham"
-
-        PREDICTION_COUNTER.labels(
-            final_label=label_str,
-            model_pred="spam" if model_pred else "ham",
-            business_rules_triggered=str(bool(business_rules_triggered)),
-            is_overridden=str(bool(is_overridden))
-        ).inc()
-
-        CONFIDENCE_HISTOGRAM.labels(
-            final_label=label_str
-        ).observe(float(confidence_score))
-
-    def record_gibberish(self, gibberish_score):
-        """Enregistre le score de charabia du modèle de Markov."""
-        if gibberish_score is not None:
-            GIBBERISH_SCORE_HISTOGRAM.observe(float(gibberish_score))
-
-    def record_banned_patterns(self, banned_patterns_found):
-        """Enregistre les anomalies détectées par les règles métier."""
-        if banned_patterns_found:
-            for pattern in banned_patterns_found:
-                anomaly = str(pattern).strip()[:50]
-                BANNED_PATTERNS_COUNTER.labels(anomaly_type=anomaly).inc()
-
-    def record_label_correction(self):
-        """Enregistre une correction humaine du label d'un message."""
-        FUNCTION_RESULT.labels(
-            pipe_type="Human Feedback",
-            function_name="Label Correction",
-            status="success",
-            error_type="none"
-        ).inc()
-
-    def record_http_error(self, endpoint, method, status_code):
-        """Enregistre une erreur HTTP par endpoint et code de statut."""
-        HTTP_ERRORS_COUNTER.labels(
-            endpoint=endpoint,
-            method=method,
-            status_code=str(status_code)
-        ).inc()
-
-    def record_unauthorized_attempt(self, endpoint, method):
-        """Enregistre une tentative d'accès non autorisée."""
-        UNAUTHORIZED_COUNTER.labels(
-            endpoint=endpoint,
-            method=method
-        ).inc()
-
-    def record_model_retrain(self, is_success, error_type=None):
-        """Enregistre le résultat d'un réentraînement du modèle."""
-        if is_success:
-            FUNCTION_RESULT.labels(
-                pipe_type="ML Pipeline",
-                function_name="Model Retrain",
-                status="success",
-                error_type="none"
-            ).inc()
-        else:
-            FUNCTION_RESULT.labels(
-                pipe_type="ML Pipeline",
-                function_name="Model Retrain",
-                status="failure",
-                error_type=type(error_type).__name__
-            ).inc()
-
-    def record_virgin_model_training(self, is_success, error_type=None):
-        """Enregistre le résultat de l'entraînement initial du modèle."""
-        if is_success:
-            FUNCTION_RESULT.labels(
-                pipe_type="ML Pipeline",
-                function_name="Virgin Model Training",
-                status="success",
-                error_type="none"
-            ).inc()
-        else:
-            FUNCTION_RESULT.labels(
-                pipe_type="ML Pipeline",
-                function_name="Virgin Model Training",
-                status="failure",
-                error_type=type(error_type).__name__
-            ).inc()
-
-    def record_model_existence_check(self, is_success, error_type=None):
-        """Enregistre le résultat de la vérification du modèle."""
-        if is_success:
-            FUNCTION_RESULT.labels(
-                pipe_type="ML Pipeline",
-                function_name="Check Model Existence",
-                status="success",
-                error_type="none"
-            ).inc()
-        else:
-            FUNCTION_RESULT.labels(
-                pipe_type="ML Pipeline",
-                function_name="Check Model Existence",
-                status="failure",
-                error_type=type(error_type).__name__
-            ).inc()

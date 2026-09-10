@@ -71,7 +71,7 @@ class Scheduler:
             f"{phase_start} -> {phase_end}"
         )
 
-    def phase_actions_end(self, phase_end=datetime.datetime.now()):
+    def phase_actions_end(self, phase_end):
         logging.info(f"Sauvegarde anonymisée des messages \n créés jusqu'au {phase_end} inclus.")
         self.DB.save_anonimized_messages(before=phase_end)
 
@@ -81,7 +81,7 @@ class Scheduler:
         logging.info("Création d'une nouvelle phase.")
         self.set_new_phase()
 
-    def phase_actions_carence(self, phase_start=datetime.datetime.now(), phase_end=datetime.datetime.now(), carence_end=datetime.datetime.now()):
+    def phase_actions_carence(self, phase_start=False, phase_end=False, carence_end=False):
         try:
             self.mail_ops.send_report(phase_start, phase_end, carence_end)
         except Exception as e:

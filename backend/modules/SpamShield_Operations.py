@@ -2,6 +2,7 @@ import sys
 import os
 import pandas as pd
 import logging
+import datetime
 import time
 import json
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__))))
@@ -18,6 +19,7 @@ from modules.LLModel import LLMModel
 from Scheduler import Scheduler
 monitor = Helpers_Monitoring()
 
+
 class SpamShield_Operations():
     def __init__(self):
         pass
@@ -26,10 +28,15 @@ class SpamShield_Operations():
     def New_Message(self, message:dict, metadata:dict):
         try:
             # Prédiction avec le modèle
+            monitor.TOTAL_MESSAGE.inc()
+            MODEL_INFERENCE_START = time.time()
             model = Model(prediction_pipe=True, metadata=metadata)
             prediction_model = model.AI_full_prediction_pipeline(message)
             pred_text = model.features['text_final'].iloc[0]
-
+            MODEL_INFERENCE_END = time.time()
+            MODEL_INFERENCE_TOTAL = (MODEL_INFERENCE_END - MODEL_INFERENCE_START)
+            monitor.MODEL_PREDICTION_INFERENCE.set(MODEL_INFERENCE_TOTAL)
+            
             # Règles métier : regexes, charabia =  forced spam
             business_rules = Business_Rules()
             prediction_business_rules = business_rules.business_rules_pipeline(pred_text, metadata)
@@ -40,14 +47,8 @@ class SpamShield_Operations():
 
             if prediction_model[0] or prediction_business_rules:
                 logging.info("is spam")
-                # Mail_Operations().send_mail(
-                #     message['text'].iloc[0],
-                #     metadata,
-                #     model.confidence_score,
-                #     "Indésirables"
-                # )
+                monitor.TOTAL_SPAM_PREDICTIONS.labels(Model=bool(prediction_model[0]), B_Rules=bool(prediction_model[0])).inc()
                 final_label = 1
-
             else:
                 logging.info(f'Potentiellement un message légitime. model = {prediction_model}, business rules = {prediction_business_rules}')
                 Mail_Operations().send_mail(
@@ -57,9 +58,10 @@ class SpamShield_Operations():
                     "Légitimes"
                 )
                 final_label = 0
+                monitor.TOTAL_HAM_PREDICTIONS.inc()
 
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="New Message", status="success")
-        
+
+            
             # stoquer information crypté et version passé au pipeline de préprocessing
             new_message = Postgres_DB().save_message(pred_text=pred_text, 
                                     raw_text=message['text'].iloc[0], 
@@ -71,23 +73,11 @@ class SpamShield_Operations():
                                     final_label=bool(final_label),
                                     is_overridden=model.override)
             
-            monitor.record_prediction(
-                final_label=final_label,
-                model_pred=bool(prediction_model[0]),
-                business_rules_triggered=bool(prediction_business_rules),
-                is_overridden=model.override,
-                confidence_score=model.confidence_score,
-            )
-
-            monitor.record_banned_patterns(banned_patterns_found)
-
-            monitor.record_gibberish(
-                gibberish_score=getattr(business_rules, 'gibberish_score', None)
-            )
-
+            monitor.CONFIDENCE_SCORE.set(model.confidence_score)
+            monitor.MESSAGE_FAILS.set(0)
         except Exception as e:
             logging.error(f"Erreur lors du traitement du message : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="New Message", status="failure", error_type=e)
+            monitor.MESSAGE_FAILS.set(1)
             raise e
 
 
@@ -99,8 +89,7 @@ class SpamShield_Operations():
             return selected_message
         except Exception as e:
             logging.error(f"Erreur lors de la sélection du message : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Select Message", status="failure", error_type=e)
-
+    
     def Show_Messages(self, trier_par, filter_par):
         try:
             messages = Postgres_DB().get_all_messages(trier_par, filter_par)
@@ -108,28 +97,22 @@ class SpamShield_Operations():
             return messages
         except Exception as e:
             logging.error(f"Erreur lors de la récupération des messages : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Show Messages", status="failure", error_type=e)
+            
 
-    
     def Dashbord(self):
         try:
             data = Postgres_DB().get_dashboard_metrics()
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Get Dashboard Metrics", status="success")
             return data
         except Exception as e:
             logging.error(f"Erreur lors de la récupération des métriques du tableau de bord : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Get Dashboard Metrics", status="failure", error_type=e)
 
     def Update_label(self, id:int):
         try:
             Postgres_DB().update_message_label(id)
             logging.info(f"Le label du message avec l'ID '{id}' a été mis à jour avec succès.")
-            monitor.record_label_correction()
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Update Message Label", status="success")
         except Exception as e:
             logging.error(f"Erreur lors de la mise à jour du label du message : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Update Message Label", status="failure", error_type=e)
-
+            
     
     def Retrain_All_Messages(self):
         try:
@@ -139,22 +122,17 @@ class SpamShield_Operations():
             model.AI_full_retrain_model_pipeline(df=messages)
             self.delete_current_training_data()
             logging.info("Réentraînement du modèle terminé avec succès.")
-            monitor.record_model_retrain(is_success=True)
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Retrain Model", status="success")
+            monitor.RETRAIN_PIPELINE_FAILS.set(0)
         except Exception as e:
             logging.error(f"Erreur lors du réentraînement du modèle : {e}")
-            monitor.record_model_retrain(is_success=False, error_type=e)
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Retrain Model", status="failure", error_type=e)
-
+            monitor.RETRAIN_PIPELINE_FAILS.set(1)
     
     def Delete_All_Messages(self):
         try:
             Postgres_DB().delete_all_messages()
             logging.info("Tous les messages ont été supprimés avec succès de la base de données.")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Delete All Messages", status="success")
         except Exception as e:
             logging.error(f"Erreur lors de la suppression de tous les messages : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Delete All Messages", status="failure", error_type=e)
 
     # DESTINATAIRES
     
@@ -162,11 +140,9 @@ class SpamShield_Operations():
         try:
             destinataires = Postgres_DB().get_prospect_mail_front()
             logging.info('Les destinataires ont été réccupérés avec succès')
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Get All Destinataires", status="success")
             return destinataires
         except Exception as e:
             logging.error(f"Erreur lors de la récupération des destinataires : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Get All Destinataires", status="failure", error_type=e)
         
 
     
@@ -174,20 +150,16 @@ class SpamShield_Operations():
         try:
             Postgres_DB().add_prospect_mail([prospect])
             logging.info(f"Le destinataire '{prospect}' a été ajoutée avec succès.")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Add Destinataire", status="success")
         except Exception as e:
             logging.error(f"Erreur lors de l'ajout du destinataire : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Add Destinataire", status="failure", error_type=e)
 
     
     def Delete_Destinataire(self, id:int):
         try:
             Postgres_DB().delete_prospect_mail([id])
             logging.info(f"Le destinataire regex avec l'ID '{id}' a été supprimée avec succès.")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Delete Destinataire", status="success")
         except Exception as e:
             logging.error(f"Erreur lors de la suppression du destinataire : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Delete Destinataire", status="failure", error_type=e)
 
 
     # REGEX
@@ -196,11 +168,9 @@ class SpamShield_Operations():
         try:
             regex_rules = Postgres_DB().get_all_regex_rules()
             logging.info('Les règles regex ont été réccupérés avec succès')
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Get All Regex Rules", status="success")
             return regex_rules
         except Exception as e:
             logging.error(f"Erreur lors de la récupération des règles regex : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Get All Regex Rules", status="failure", error_type=e)
         
 
     
@@ -208,20 +178,16 @@ class SpamShield_Operations():
         try:
             Postgres_DB().add_regex_rule(pattern)
             logging.info(f"La règle regex '{pattern}' a été ajoutée avec succès.")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Add Regex Rule", status="success")
         except Exception as e:
             logging.error(f"Erreur lors de l'ajout de la règle regex : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Add Regex Rule", status="failure", error_type=e)
 
     
     def Delete_Regex_Rule(self, id:int):
         try:
             Postgres_DB().delete_regex_rule(id)
             logging.info(f"La règle regex avec l'ID '{id}' a été supprimée avec succès.")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Delete Regex Rule", status="success")
         except Exception as e:
             logging.error(f"Erreur lors de la suppression de la règle regex : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Delete Regex Rule", status="failure", error_type=e)
 
     # MODEL
     
@@ -229,19 +195,16 @@ class SpamShield_Operations():
         try:
             logging.info("Aucun modèle existant trouvé dans ML Flow. Entraînement d'un modèle vierge.")
             Model().AI_full_virgin_model_training_pipeline()
-            monitor.record_virgin_model_training(is_success=True)
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Virgin Model Training", status="success")
+            monitor.INITIAL_TRAIN_FAILS.set(0)
         except Exception as e:
             logging.error(f"Erreur lors de l'entraînement du modèle vierge : {e}")
-            monitor.record_virgin_model_training(is_success=False, error_type=e)
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Virgin Model Training", status="failure", error_type=e)
+            monitor.INITIAL_TRAIN_FAILS.set(1)
             raise
     
     def Current_Model_Metrics(self):
         try:
             metrics = ML_Flow_Operations().get_latest_model_metrics()
             logging.info(metrics)
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Get Current Model Metrics", status="success")
             try:
                 training_data = self.get_current_training_data()
                 metrics['training_data'] = training_data.shape[0]
@@ -250,7 +213,6 @@ class SpamShield_Operations():
             return metrics
         except Exception as e:
             logging.error(f"Erreur lors de la récupération des métriques du modèle actuel : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Get Current Model Metrics", status="failure", error_type=e)
         
 
     def get_current_training_data(self, path=f"{os.path.dirname(__file__)}/data/training_data.parquet"):
@@ -272,11 +234,9 @@ class SpamShield_Operations():
         try:
             path = f"{os.path.dirname(__file__)}/data/required_metadata.json"
             with open(path, "r", encoding="utf-8") as f:
-                monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Get Form Requirements", status="success")
                 return json.load(f)
         except Exception as e:
             logging.error(f"Erreur lors de la récupération des exigences du formulaire : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Get Form Requirements", status="failure", error_type=e)
 
      
     def Update_Form_Requirements(self, key: str, path: str = f"{os.path.dirname(__file__)}/data/required_metadata.json"):
@@ -292,11 +252,9 @@ class SpamShield_Operations():
             data[key] = not data[key]
 
             with open(path, "w", encoding="utf-8") as f:
-                monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Update Form Requirements", status="success")
                 json.dump(data, f, indent=4)
         except Exception as e:
             logging.error(f"Erreur lors de la mise à jour des exigences du formulaire : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Update Form Requirements", status="failure", error_type=e)
 
     
     def ML_Test_New_Message(self, message:dict, metadata:dict):
@@ -312,18 +270,15 @@ class SpamShield_Operations():
                 final_label = 1
             else:
                 final_label = 0
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="ML Test New Message", status="success")
             return final_label
         except Exception as e:
             logging.error(f"Erreur lors du test du nouveau message : {e}")
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="ML Test New Message", status="failure", error_type=e)
 
     def check_model_existence(self):
         model_path = f"{Model().artifact_path}/model.pkl"
         max_attempts = 5
         delay_seconds = 5
         last_error = None
-
         for attempt in range(1, max_attempts + 1):
             try:
                 logging.info(f"Vérification du modèle - tentative {attempt}/{max_attempts}")
@@ -333,8 +288,6 @@ class SpamShield_Operations():
                     self.virgin_model()
                 else:
                     logging.info("Modèle existant trouvé en local.")
-                monitor.record_model_existence_check(is_success=True)
-                monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Check Model Existence", status="success")
                 return
             except Exception as e:
                 last_error = e
@@ -343,61 +296,39 @@ class SpamShield_Operations():
                 if attempt < max_attempts:
                     logging.info(f"Nouvelle tentative dans {delay_seconds} secondes.")
                     time.sleep(delay_seconds)
-
-
+        monitor.CHECK_MODEL_EXISTANCE_FAILS.set(0)
         # Toutes les tentatives ont échoué
         logging.error(
             f"Impossible de vérifier ou initialiser le modèle "
             f"après {max_attempts} tentatives : {last_error}"
         )
-
-        monitor.record_model_existence_check(
-            is_success=False,
-            error_type=last_error
-        )
-
-        monitor.record_methode_result(
-            pipe_type="Spamshield Operations",
-            is_success=False,
-            name="Check Model Existence",
-            status="failure",
-            error_type=last_error
-        )
-
+        monitor.CHECK_MODEL_EXISTANCE_FAILS.set(1)
         raise last_error
 
             
 
     def llm_report(self):
         try:
+            monitor.TOTAL_LLM_CALLS.inc()
+            LLM_INFERENCE_START = time.time()
             report_data = LLMModel().generate_report_mistral()
-
-            monitor.record_methode_result(
-            pipe_type="Spamshield Operations",
-            is_success=True,
-            name="Vulgarize with llm the metrics",
-            status="success"
-            )
-
+            LLM_INFERENCE_END = time.time()
+            LLM_INFERENCE_TOTAL = LLM_INFERENCE_END - LLM_INFERENCE_START
+            monitor.TOTAL_LLM_CALLS_FAILS.set(0)
             return report_data
-
         except Exception as e:
             logging.error(
-                f"Erreur lors de la vulgarisation avec le llm"
+                f"Erreur lors de la vulgarisation avec le llm - {e}"
             )
-            monitor.record_methode_result(
-                pipe_type="Spamshield Operations",
-                is_success=False,
-                name="Vulgarize with llm the metrics",
-                status="failure",
-                error_type=e
-            )
+            monitor.TOTAL_LLM_CALLS_FAILS.set(1)
+
 
     def Set_new_phase(self):
         try:
-            Scheduler().phase_actions_carence()
-            Scheduler().phase_actions_end()
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=True, name="Set_New_Phase", status="success")
+            phase_end = datetime.datetime.now()
+            Scheduler().phase_actions_carence(phase_end=phase_end)
+            Scheduler().phase_actions_end(phase_end=phase_end)
+            monitor.FLUSH_MESSAGES_FAIL.set(0)
         except Exception as e:
-            monitor.record_methode_result(pipe_type="Spamshield Operations", is_success=False, name="Set_New_Phase", status="failure", error_type=e)
+            monitor.FLUSH_MESSAGES_FAIL.set(1)
             raise

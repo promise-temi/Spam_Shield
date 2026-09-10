@@ -56,16 +56,16 @@ app.add_middleware(
 )
 
 
-@app.middleware("http")
-async def monitoring_middleware(request: Request, call_next):
-    response = await call_next(request)
+# @app.middleware("http")
+# async def monitoring_middleware(request: Request, call_next):
+#     response = await call_next(request)
 
-    if response.status_code == 401:
-        monitor.record_unauthorized_attempt(endpoint=request.url.path, method=request.method)
+#     if response.status_code == 401:
+#         monitor.record_unauthorized_attempt(endpoint=request.url.path, method=request.method)
 
-    if response.status_code >= 400:
-        monitor.record_http_error(endpoint=request.url.path, method=request.method, status_code=response.status_code)
-    return response
+#     if response.status_code >= 400:
+#         monitor.record_http_error(endpoint=request.url.path, method=request.method, status_code=response.status_code)
+#     return response
 
 
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -143,6 +143,7 @@ class DestinataireRequest(BaseModel):
 def request_auth_code(data: AuthEmailRequest):
     email_address = os.getenv("EMAIL_ADDRESS")
     if data.email != email_address:
+        monitoring.FORBIDEN.inc(1)
         raise HTTPException(status_code=403, detail="Vous n'avez pas les droits pour accéder à cette application.")
 
     db = Postgres_DB()
@@ -190,6 +191,7 @@ def verify_auth_code(data: AuthCodeRequest, response: Response):
     auth_data = db.get_latest_auth_code(data.email)
 
     if not auth_data:
+        monitoring.UNAUTHORIZED.inc(1)
         raise HTTPException(status_code=401, detail="Aucun code de connexion trouvé.")
 
     auth_id = auth_data[0]
@@ -197,12 +199,15 @@ def verify_auth_code(data: AuthCodeRequest, response: Response):
     code_expires_at = auth_data[2]
 
     if (code_hash is None or code_expires_at is None):
+        monitoring.UNAUTHORIZED.inc(1)
         raise HTTPException(status_code=401, detail="Code invalide.")
 
     if (datetime.datetime.now() >= code_expires_at):
+        monitoring.UNAUTHORIZED.inc(1)
         raise HTTPException(status_code=401, detail="Code expiré.")
 
     if not security.verify_hashed_value(data.code, code_hash):
+        monitoring.UNAUTHORIZED.inc(1)
         raise HTTPException(status_code=401, detail="Code invalide.")
 
     session_token = (security.generate_session_token())
