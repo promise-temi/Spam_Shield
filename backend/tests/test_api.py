@@ -15,9 +15,7 @@ sys.path.insert(
 )
 
 
-os.environ["BACKEND_API_KEY"] = "cle-de-test-1234"
-os.environ["ENCRYPTION_KEY"] = "RxdMLSRTwGMYW6gNoAEvlWbdOHI6iDzjssyXCMMzq2I="
-os.environ["MISTRAL_API_KEY"] = "cle-mistral-factice-pour-les-tests"
+
 os.environ["EMAIL_ADDRESS"] = "admin@spamshield.test"
 os.environ["EMAIL_PASSWORD"] = "mot-de-passe-test"
 

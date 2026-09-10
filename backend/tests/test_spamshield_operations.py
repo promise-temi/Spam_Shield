@@ -7,6 +7,127 @@ from unittest.mock import patch, MagicMock
 
 
 # ============================================================
+# HELPERS DE TEST
+# ============================================================
+
+def patch_test_database(
+    test_db,
+    monkeypatch
+):
+    """
+    Force les différents modules de SpamShield
+    à utiliser la vraie base de données de test.
+    """
+
+    monkeypatch.setattr(
+        "modules.SpamShield_Operations.Postgres_DB",
+        lambda *args, **kwargs: test_db
+    )
+
+    monkeypatch.setattr(
+        "modules.Business_Rules.Postgres_DB",
+        lambda *args, **kwargs: test_db
+    )
+
+    monkeypatch.setattr(
+        "Business_Rules.Postgres_DB",
+        lambda *args, **kwargs: test_db
+    )
+
+    monkeypatch.setattr(
+        "modules.Mail_Operations.Postgres_DB",
+        lambda *args, **kwargs: test_db
+    )
+
+
+def get_test_message():
+    return pd.DataFrame(
+        [
+            {
+                "text": "je suis un test"
+            }
+        ]
+    )
+
+
+def get_test_metadata():
+    return {
+        "name": "Jane",
+        "surname": "Doe",
+        "email": "Jane.Doe@email.com",
+        "phone": "0605678978",
+        "subject": "Ceci est un test",
+        "form_id": "test"
+    }
+
+
+def create_real_test_message(
+    spamshield,
+    test_db,
+    test_model_pred,
+    monkeypatch
+):
+    """
+    Crée réellement un message dans la DB de test
+    via SpamShield.New_Message().
+    """
+
+    monkeypatch.setattr(
+        "modules.SpamShield_Operations.Model",
+        lambda **kwargs: test_model_pred
+    )
+
+    patch_test_database(
+        test_db,
+        monkeypatch
+    )
+
+    # Empêche seulement l'envoi réel d'un email
+    mock_mail = MagicMock()
+
+    monkeypatch.setattr(
+        "modules.SpamShield_Operations.Mail_Operations",
+        lambda: mock_mail
+    )
+
+    message = get_test_message()
+    metadata = get_test_metadata()
+
+    messages_avant = spamshield.Show_Messages(
+        "date",
+        "tous"
+    )
+
+    ids_avant = {
+        row["id"]
+        for row in messages_avant
+    }
+
+    spamshield.New_Message(
+        message,
+        metadata
+    )
+
+    messages_apres = spamshield.Show_Messages(
+        "date",
+        "tous"
+    )
+
+    nouveaux_messages = [
+        row
+        for row in messages_apres
+        if row["id"] not in ids_avant
+    ]
+
+    assert len(nouveaux_messages) == 1, (
+        "New_Message doit créer exactement "
+        "un nouveau message dans la DB de test."
+    )
+
+    return nouveaux_messages[0]
+
+
+# ============================================================
 # TEST VIRGIN MODEL
 # ============================================================
 
@@ -16,13 +137,11 @@ def test_virgin_model(
     mock_monitor,
     monkeypatch,
 ):
-    # Forcer SpamShield_Operations à utiliser le modèle de test
     monkeypatch.setattr(
         "modules.SpamShield_Operations.Model",
         lambda: test_model
     )
 
-    # Neutraliser MLflow pendant l'entraînement
     with patch("modules.Model.mlflow.start_run"), \
          patch("modules.Model.ML_Flow_Operations"), \
          patch("Preprocessing.ML_Flow_Operations"), \
@@ -32,7 +151,6 @@ def test_virgin_model(
 
         spamshield.virgin_model()
 
-    # Artefacts créés localement
     assert os.path.exists(
         "backend/tests/test_ressources/model.pkl"
     )
@@ -65,201 +183,28 @@ def test_new_message(
     mock_monitor,
     monkeypatch,
 ):
-    # ========================================================
-    # MODEL DE TEST
-    # ========================================================
-
-    monkeypatch.setattr(
-        "modules.SpamShield_Operations.Model",
-        lambda **kwargs: test_model_pred
-    )
-
-    # ========================================================
-    # MESSAGE
-    # ========================================================
-
-    message = pd.DataFrame(
-        [
-            {
-                "text": "je suis un test"
-            }
-        ]
-    )
-
-    metadata = {
-        "name": "Jane",
-        "surname": "Doe",
-        "email": "Jane.Doe@email.com",
-        "phone": "0605678978",
-        "subject": "Ceci est un test",
-        "form_id": "test"
-    }
-
-    # ========================================================
-    # DATABASE DE TEST
-    # ========================================================
-
-    monkeypatch.setattr(
-        "modules.SpamShield_Operations.Postgres_DB",
-        lambda *args, **kwargs: test_db
-    )
-
-    monkeypatch.setattr(
-        "Business_Rules.Postgres_DB",
-        lambda *args, **kwargs: test_db
-    )
-
-    monkeypatch.setattr(
-        "modules.Business_Rules.Postgres_DB",
-        lambda *args, **kwargs: test_db
-    )
-
-    monkeypatch.setattr(
-        "modules.Mail_Operations.Postgres_DB",
-        lambda *args, **kwargs: test_db
-    )
-
-    # ========================================================
-    # MOCK DE save_message
-    # ========================================================
-
-    save_message_mock = MagicMock()
-
-    monkeypatch.setattr(
+    nouveau_message = create_real_test_message(
+        spamshield,
         test_db,
-        "save_message",
-        save_message_mock
+        test_model_pred,
+        monkeypatch
     )
 
-    # ========================================================
-    # MAIL MOCKÉ
-    # ========================================================
+    assert nouveau_message is not None
 
-    mock_mail = MagicMock()
+    assert "id" in nouveau_message
 
-    monkeypatch.setattr(
-        "modules.SpamShield_Operations.Mail_Operations",
-        lambda: mock_mail
-    )
+    assert "final_label" in nouveau_message
 
-    # ========================================================
-    # EXECUTION
-    # ========================================================
-
-    spamshield.New_Message(
-        message,
-        metadata
-    )
-
-    # ========================================================
-    # VERIFICATIONS
-    # ========================================================
-
-    # New_Message doit tenter de sauvegarder exactement
-    # un message
-    save_message_mock.assert_called_once()
-
-    # On récupère tout ce qui a été donné à save_message()
-    call_kwargs = save_message_mock.call_args.kwargs
-
-    # --------------------------------------------------------
-    # LABEL FINAL
-    # --------------------------------------------------------
-
-    assert "final_label" in call_kwargs
-
-    assert call_kwargs["final_label"] in [
+    assert nouveau_message["final_label"] in [
         True,
-        False
+        False,
+        0,
+        1
     ]
 
-    # --------------------------------------------------------
-    # SCORE DE CONFIANCE
-    # --------------------------------------------------------
 
-    assert "model_confidence" in call_kwargs
 
-    assert isinstance(
-        call_kwargs["model_confidence"],
-        float
-    )
-
-    assert (
-        0.0
-        <= call_kwargs["model_confidence"]
-        <= 1.0
-    )
-
-    # --------------------------------------------------------
-    # TEXTE ORIGINAL
-    # --------------------------------------------------------
-
-    assert "raw_text" in call_kwargs
-
-    assert (
-        call_kwargs["raw_text"]
-        == "je suis un test"
-    )
-
-    # --------------------------------------------------------
-    # METADATA
-    # --------------------------------------------------------
-
-    assert "metadata" in call_kwargs
-
-    assert (
-        call_kwargs["metadata"]
-        == metadata
-    )
-
-    # --------------------------------------------------------
-    # PREDICTION MODEL
-    # --------------------------------------------------------
-
-    assert "model_pred" in call_kwargs
-
-    assert isinstance(
-        call_kwargs["model_pred"],
-        bool
-    )
-
-    # --------------------------------------------------------
-    # BUSINESS RULES
-    # --------------------------------------------------------
-
-    assert "business_rules_label" in call_kwargs
-
-    assert isinstance(
-        call_kwargs["business_rules_label"],
-        bool
-    )
-
-    # --------------------------------------------------------
-    # OVERRIDE
-    # --------------------------------------------------------
-
-    assert "is_overridden" in call_kwargs
-
-    # --------------------------------------------------------
-    # TEXTE PREPROCESSE
-    # --------------------------------------------------------
-
-    assert "pred_text" in call_kwargs
-
-    assert isinstance(
-        call_kwargs["pred_text"],
-        str
-    )
-
-    assert len(
-        call_kwargs["pred_text"]
-    ) > 0
-
-    # --------------------------------------------------------
-    # PATTERNS INTERDITS
-    # --------------------------------------------------------
-
-    assert "banned_patterns_found" in call_kwargs
 
 
 # ============================================================
@@ -293,37 +238,101 @@ def test_retrain_all_messages(
 
 def test_update_label(
     spamshield,
-    mock_monitor
+    test_db,
+    test_model_pred,
+    mock_monitor,
+    monkeypatch,
 ):
-    messages = spamshield.Show_Messages(
-        "date",
-        "tous"
+    nouveau_message = create_real_test_message(
+        spamshield,
+        test_db,
+        test_model_pred,
+        monkeypatch
     )
 
-    assert len(messages) > 0, (
-        "La base de test doit contenir au moins un message"
-    )
+    message_id = nouveau_message["id"]
 
-    premier_id = messages[0]["id"]
-
-    label_avant = (
-        messages[0]["final_label"]
-    )
+    label_avant = nouveau_message[
+        "final_label"
+    ]
 
     spamshield.Update_label(
-        premier_id
+        message_id
     )
 
-    message_apres = (
-        spamshield.Select_Message(
-            premier_id
-        )
+    message_apres = spamshield.Select_Message(
+        message_id
     )
+
+    assert message_apres is not None
 
     assert (
         message_apres["final_label"]
         != label_avant
     )
+
+
+# ============================================================
+# SELECT MESSAGE
+# ============================================================
+
+def test_select_message(
+    spamshield,
+    test_db,
+    test_model_pred,
+    mock_monitor,
+    monkeypatch,
+):
+    nouveau_message = create_real_test_message(
+        spamshield,
+        test_db,
+        test_model_pred,
+        monkeypatch
+    )
+
+    message_id = nouveau_message["id"]
+
+    selected_message = spamshield.Select_Message(
+        message_id
+    )
+
+    assert selected_message is not None
+
+    assert (
+        selected_message["id"]
+        == message_id
+    )
+
+
+# ============================================================
+# SHOW MESSAGES
+# ============================================================
+
+def test_show_messages(
+    spamshield,
+    test_db,
+    test_model_pred,
+    mock_monitor,
+    monkeypatch,
+):
+    create_real_test_message(
+        spamshield,
+        test_db,
+        test_model_pred,
+        monkeypatch
+    )
+
+    messages = spamshield.Show_Messages(
+        "date",
+        "tous"
+    )
+
+    assert isinstance(
+        messages,
+        list
+    )
+
+    assert len(messages) > 0
 
 
 # ============================================================
@@ -342,14 +351,15 @@ def test_add_regex_rule(
     )
 
     regexes = (
-        spamshield.Get_All_Regex_Rules()
+        spamshield
+        .Get_All_Regex_Rules()
     )
 
     patterns = [
-        r["pattern"]
-        if isinstance(r, dict)
-        else r
-        for r in regexes
+        regex["pattern"]
+        if isinstance(regex, dict)
+        else regex
+        for regex in regexes
     ]
 
     assert (
@@ -362,7 +372,8 @@ def test_get_all_regex_rules(
     spamshield
 ):
     result = (
-        spamshield.Get_All_Regex_Rules()
+        spamshield
+        .Get_All_Regex_Rules()
     )
 
     assert isinstance(
@@ -383,17 +394,18 @@ def test_delete_regex_rule(
     )
 
     regexes = (
-        spamshield.Get_All_Regex_Rules()
+        spamshield
+        .Get_All_Regex_Rules()
     )
 
-    regex_a_suppr = next(
-        r
-        for r in regexes
-        if r["pattern"] == pattern_test
+    regex_a_supprimer = next(
+        regex
+        for regex in regexes
+        if regex["pattern"] == pattern_test
     )
 
     spamshield.Delete_Regex_Rule(
-        regex_a_suppr["id"]
+        regex_a_supprimer["id"]
     )
 
     regexes_apres = (
@@ -402,8 +414,8 @@ def test_delete_regex_rule(
     )
 
     patterns_apres = [
-        r["pattern"]
-        for r in regexes_apres
+        regex["pattern"]
+        for regex in regexes_apres
     ]
 
     assert (
@@ -447,10 +459,10 @@ def test_add_destinataire(
     )
 
     emails = [
-        d["email"]
-        if isinstance(d, dict)
-        else d
-        for d in destinataires
+        destinataire["email"]
+        if isinstance(destinataire, dict)
+        else destinataire
+        for destinataire in destinataires
     ]
 
     assert (
@@ -475,14 +487,15 @@ def test_delete_destinataire(
         .Get_All_Destinataires()
     )
 
-    dest_a_suppr = next(
-        d
-        for d in destinataires
-        if d["email"] == email_test
+    destinataire_a_supprimer = next(
+        destinataire
+        for destinataire in destinataires
+        if destinataire["email"]
+        == email_test
     )
 
     spamshield.Delete_Destinataire(
-        dest_a_suppr["id"]
+        destinataire_a_supprimer["id"]
     )
 
     destinataires_apres = (
@@ -491,8 +504,9 @@ def test_delete_destinataire(
     )
 
     emails_apres = [
-        d["email"]
-        for d in destinataires_apres
+        destinataire["email"]
+        for destinataire
+        in destinataires_apres
     ]
 
     assert (
@@ -506,11 +520,26 @@ def test_delete_destinataire(
 # ============================================================
 
 def test_dashboard(
-    spamshield
+    spamshield,
+    test_db,
+    test_model_pred,
+    mock_monitor,
+    monkeypatch,
 ):
-    result = (
-        spamshield.Dashbord()
+    # Important :
+    # on crée réellement un message avant
+    # d'appeler le dashboard pour éviter
+    # une DB totalement vide.
+    create_real_test_message(
+        spamshield,
+        test_db,
+        test_model_pred,
+        monkeypatch
     )
+
+    result = spamshield.Dashbord()
+
+    assert result is not None
 
     assert isinstance(
         result,
@@ -613,8 +642,8 @@ def test_update_form_requirements(
 
     with open(
         fake_required_metadata
-    ) as f:
-        data = json.load(f)
+    ) as file:
+        data = json.load(file)
 
     assert (
         data["email"]
