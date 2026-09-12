@@ -159,6 +159,9 @@ class Preprocessing:
         et retourne le DataFrame modifié.
         """
         self.df = self.df.drop_duplicates(subset=["text_preprocessed"], keep="first").reset_index(drop=True)
+        if not self.prediction_pipe:
+            print(f'nombre de spam apres normalisation et prétraitement : {self.df[self.df['label'] == 1].shape[0]}')
+            print(f'nombre de ham apres normalisation et prétraitement : {self.df[self.df['label'] == 0].shape[0]}')
 
     
     def delete_memory_data(self):

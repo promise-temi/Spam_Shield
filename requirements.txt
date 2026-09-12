@@ -39,3 +39,4 @@ google-genai
 pyjwt
 pwdlib
 
+pytest-cov

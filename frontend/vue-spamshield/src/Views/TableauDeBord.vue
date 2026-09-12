@@ -836,13 +836,15 @@ div.llm-report-header{
 }
 
 div.llm-report-content{
-  max-height: 110px;
+  max-height: 150px;
   overflow-y: auto;
   padding: 10px 12px;
+  padding-bottom: 50px;
 }
 
 div.llm-report-content p{
   margin: 0;
+  margin-bottom: 20px;
   color: white;
   font-size: 13px;
   line-height: 1.5;
