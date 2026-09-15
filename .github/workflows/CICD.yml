@@ -193,4 +193,5 @@ jobs:
         shell: powershell
         run: |
           docker compose down
-          docker compose up --build
+          docker compose up --build -d
+          docker compose ps
