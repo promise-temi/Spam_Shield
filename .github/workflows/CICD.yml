@@ -121,6 +121,27 @@ jobs:
       - name: Recuperer la version validee
         uses: actions/checkout@v4
 
+      - name: Creer le fichier env de deploiement
+        shell: powershell
+        run: |
+          $content = @"
+          DB_DATABASE=$env:DB_DATABASE
+          DB_USER=$env:DB_USER
+          DB_HOST=$env:DB_HOST
+          DB_PASSWORD=$env:DB_PASSWORD
+          DB_PORT=$env:DB_PORT
+          EMAIL_ADDRESS=$env:EMAIL_ADDRESS
+          EMAIL_PASSWORD=$env:EMAIL_PASSWORD
+          ENCRYPTION_KEY=$env:ENCRYPTION_KEY
+          MISTRAL_API_KEY=$env:MISTRAL_API_KEY
+          BACKEND_API_KEY=$env:BACKEND_API_KEY
+          MLFLOW_TRACKING_URI=$env:MLFLOW_TRACKING_URI
+          "@
+
+          [System.IO.File]::WriteAllText(
+            (Join-Path $PWD ".env"),
+            $content
+          )
       - name: Creer required_metadata.json si absent
         shell: powershell
         run: |
