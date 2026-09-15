@@ -318,3 +318,8 @@ Les dashboards Grafana préparés pour SpamShield sont disponibles dans :
 ```
 
 Les fichiers JSON présents dans ce dossier peuvent être importés dans Grafana afin de retrouver les dashboards du projet.
+
+# Note pour le déploiement
+Si le déploiement est effectué sur la même machine que l’environnement de développement, penser à supprimer les anciens volumes Docker du projet afin d’éviter la réutilisation de données persistantes provenant de l’environnement de développement, notamment pour PostgreSQL.
+
+Incident rencontré : l’ancien volume PostgreSQL conservait un ancien mot de passe, différent de celui défini dans les secrets du nouvel environnement. Cela provoquait une erreur d’authentification malgré des variables d’environnement correctes.
