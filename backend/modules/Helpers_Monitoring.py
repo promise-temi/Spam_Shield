@@ -19,6 +19,24 @@ class Helpers_Monitoring:
             "Temps d'inférence à un instant T"
         )
 
+        self.TRAIN_PREDICTION_INFERENCE = _get_or_create(
+            Gauge, 
+            "train_pred_inference", 
+            "Temps d'inférence à un instant T"
+        )
+
+        self.RETRAIN_PREDICTION_INFERENCE = _get_or_create(
+            Gauge, 
+            "retrain_pred_inference", 
+            "Temps d'inférence à un instant T"
+        )
+
+        self.LLM_PREDICTION_INFERENCE = _get_or_create(
+            Gauge, 
+            "llm_pred_inference", 
+            "Temps d'inférence à un instant T"
+        )
+
         self.TOTAL_SPAM_PREDICTIONS = _get_or_create(
             Counter,
             "spam_Total_predictions",

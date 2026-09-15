@@ -119,7 +119,11 @@ class SpamShield_Operations():
             #reccupère les messages préprocésé sous forme de liste de dictionnaire
             messages = self.get_current_training_data()
             model = Model()
+            RETRAIN_INFERENCE_START = time.time()
             model.AI_full_retrain_model_pipeline(df=messages)
+            RETRAIN_INFERENCE_END = time.time()
+            RETRAIN_INFERENCE_TOTAL = (RETRAIN_INFERENCE_END - RETRAIN_INFERENCE_START)
+            monitor.RETRAIN_PREDICTION_INFERENCE.set(RETRAIN_INFERENCE_TOTAL)
             self.delete_current_training_data()
             logging.info("Réentraînement du modèle terminé avec succès.")
             monitor.RETRAIN_PIPELINE_FAILS.set(0)
@@ -194,7 +198,12 @@ class SpamShield_Operations():
     def virgin_model(self):
         try:
             logging.info("Aucun modèle existant trouvé dans ML Flow. Entraînement d'un modèle vierge.")
+            TRAIN_INFERENCE_START = time.time()
             Model().AI_full_virgin_model_training_pipeline()
+            TRAIN_INFERENCE_END = time.time()
+            TRAIN_INFERENCE_TOTAL = (TRAIN_INFERENCE_END - TRAIN_INFERENCE_START)
+            monitor.RETRAIN_PREDICTION_INFERENCE.set(TRAIN_INFERENCE_TOTAL)
+            
             monitor.INITIAL_TRAIN_FAILS.set(0)
         except Exception as e:
             logging.error(f"Erreur lors de l'entraînement du modèle vierge : {e}")
@@ -314,6 +323,7 @@ class SpamShield_Operations():
             report_data = LLMModel().generate_report_mistral()
             LLM_INFERENCE_END = time.time()
             LLM_INFERENCE_TOTAL = LLM_INFERENCE_END - LLM_INFERENCE_START
+            monitor.LLM_PREDICTION_INFERENCE.set(LLM_INFERENCE_TOTAL)
             monitor.TOTAL_LLM_CALLS_FAILS.set(0)
             return report_data
         except Exception as e:
