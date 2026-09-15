@@ -29,6 +29,10 @@ env:
   TEST_DB_HOST: ${{ secrets.TEST_DB_HOST }}
   TEST_DB_PORT: ${{ secrets.TEST_DB_PORT }}
 
+  # --FRONTEND VUE--
+  VITE_BACKEND_API_KEY: ${{ secrets.VITE_BACKEND_API_KEY }}
+  VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
   # -- MLFLOW --
   MLFLOW_TRACKING_URI: http://mlflow:5050
 
@@ -121,10 +125,11 @@ jobs:
       - name: Recuperer la version validee
         uses: actions/checkout@v4
 
-      - name: Creer le fichier env de deploiement
+      - name: Creer les fichiers env de deploiement
         shell: powershell
         run: |
-          $content = @"
+          # .env BACKEND / DOCKER
+          $backendEnv = @"
           DB_DATABASE=$env:DB_DATABASE
           DB_USER=$env:DB_USER
           DB_HOST=$env:DB_HOST
@@ -140,7 +145,18 @@ jobs:
 
           [System.IO.File]::WriteAllText(
             (Join-Path $PWD ".env"),
-            $content
+            $backendEnv
+          )
+
+          # .env FRONTEND VUE
+          $frontendEnv = @"
+          VITE_BACKEND_API_KEY=$env:VITE_BACKEND_API_KEY
+          VITE_API_URL=$env:VITE_API_URL
+          "@
+
+          [System.IO.File]::WriteAllText(
+            (Join-Path $PWD "frontend/vue-spamshield/.env"),
+            $frontendEnv
           )
       - name: Creer required_metadata.json si absent
         shell: powershell
