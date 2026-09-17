@@ -94,26 +94,11 @@ jobs:
           exit 1
 
 
-      - name: Configurer la couverture
-        run: |
-          cat > .coveragerc << 'EOF'
-          [run]
-          source = backend
-          omit =
-              backend/tests/*
-              */tests/*
-              */test_*.py
-
-          [report]
-          show_missing = True
-          skip_empty = True
-          EOF
-
       - name: Lancer les tests et calculer la couverture
         run: |
           pytest backend/tests \
             --cov=backend \
-            --cov-config=.coveragerc \
+            --cov-omit="backend/tests/*" \
             --cov-report=term-missing \
             --cov-report=html:htmlcov \
             --cov-report=xml:coverage.xml \
